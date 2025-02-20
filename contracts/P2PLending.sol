@@ -162,23 +162,28 @@ contract P2PLending is ReentrancyGuard, Ownable {
         emit CollateralClaimed(_loanId, loan.unit0Amount);
     }
 
-    function getActiveOffers() external view returns (uint256[] memory) {
-        uint256[] memory activeOffers = new uint256[](offerCount);
+    function getActiveOffers() external view returns (LendingOffer[] memory) {
+        // Önce aktif teklif sayısını bul
         uint256 activeCount = 0;
-        
         for(uint256 i = 1; i <= offerCount; i++) {
             if(lendingOffers[i].isActive) {
-                activeOffers[activeCount] = i;
                 activeCount++;
             }
         }
+    
+        // Aktif teklifleri içerecek array oluştur
+        LendingOffer[] memory activeOffers = new LendingOffer[](activeCount);
+        uint256 currentIndex = 0;
         
-        uint256[] memory result = new uint256[](activeCount);
-        for(uint256 i = 0; i < activeCount; i++) {
-            result[i] = activeOffers[i];
+        // Aktif teklifleri doldur
+        for(uint256 i = 1; i <= offerCount; i++) {
+            if(lendingOffers[i].isActive) {
+                activeOffers[currentIndex] = lendingOffers[i];
+                currentIndex++;
+            }
         }
         
-        return result;
+        return activeOffers;
     }
 
     function getUserLoans(address _user) external view returns (uint256[] memory) {
