@@ -56,7 +56,7 @@ createAppKit({
 const App = () => {
   // CONTRACT ADDRESSES
   const UUSDT_TOKEN_ADDRESS = "0xC46643d498067CA186505E2eCD3c4A41A4b76dA0";
-  const P2PBORROWLENDING_ADDRESS = "0xB075a60c852719C866e5205b7540DC75522Bd880";
+  const P2PBORROWLENDING_ADDRESS = "0x5dD54EB84A59aE635B7f0fa2F1954Ab89D5b9c37";
 
   // WALLET
   const { walletProvider } = useAppKitProvider("eip155");
@@ -75,6 +75,7 @@ const App = () => {
   // STATES
   const [activeOffers, setActiveOffers] = useState([]);
   const [userLoans, setUserLoans] = useState([]);
+  const [repayingLoans, setRepayingLoans] = useState({});
   const [lendingValues, setLendingValues] = useState({
     uusdtAmount: "", // Normal rakam girecek (örn: 100)
     collateralRate: "", // Normal yüzde girecek (örn: 150)
@@ -173,7 +174,6 @@ const App = () => {
     if (!p2pBorrowLendingContract) return;
     try {
       const offers = await p2pBorrowLendingContract.getActiveOffers();
-      console.log("offers:", offers);
       setActiveOffers(offers);
     } catch (error) {
       console.error("Error fetching offers:", error);
@@ -229,17 +229,18 @@ const App = () => {
   const handleBorrowFromOffer = async (offerId) => {
     setIsBorrowing(true);
     try {
-      const offer = activeOffers[offerId];
-      const requiredUnit0 = await p2pBorrowLendingContract.calculateRequiredUNIT0(
-        offer.uusdtAmount,
-        offer.collateralRate
-      );
+      const offer = activeOffers.find((offer) => offer.id.toString() === offerId.toString());
+      if (!offer) {
+        console.error("Offer not found");
+        return;
+      }
 
-      const tx = await p2pBorrowLendingContract.borrowFromOffer(offerId, {
-        value: requiredUnit0,
+      const tx = await p2pBorrowLendingContract.borrowFromOffer(offer.id, {
+        value: offer.requiredUNIT0,
       });
       await tx.wait();
       fetchUserLoans();
+      fetchActiveOffers();
     } catch (error) {
       console.error("Borrow error:", error);
     } finally {
@@ -248,12 +249,80 @@ const App = () => {
   };
 
   const handleRepayLoan = async (loanId) => {
+    setRepayingLoans((prev) => ({ ...prev, [loanId]: true }));
     try {
-      const tx = await p2pBorrowLendingContract.repayLoan(loanId);
+      // Get loan details
+      const loan = userLoans.find((loan) => loan.id.toString() === loanId.toString());
+      if (!loan) {
+        console.error("Loan not found");
+        return;
+      }
+
+      // Check if loan is active and not expired
+      const currentTime = Math.floor(Date.now() / 1000);
+      const loanEndTime = Number(loan.startTime) + Number(loan.duration) * 60;
+
+      if (!loan.isActive) {
+        console.error("Loan is not active");
+        return;
+      }
+
+      if (currentTime > loanEndTime) {
+        console.error("Loan has expired");
+        return;
+      }
+
+      // Calculate total repayment amount (principal + interest)
+      const interest = (BigInt(loan.uusdtAmount) * BigInt(loan.interestRate)) / BigInt(1000);
+      const totalRepayment = BigInt(loan.uusdtAmount) + interest;
+
+      console.log("Repayment details:", {
+        loanId: loan.id.toString(),
+        principal: ethers.formatEther(loan.uusdtAmount),
+        interest: ethers.formatEther(interest),
+        totalRepayment: ethers.formatEther(totalRepayment),
+      });
+
+      // Check UUSDT balance
+      const uusdtBalance = await uusdtTokenContract.balanceOf(address);
+      if (uusdtBalance < totalRepayment) {
+        console.error("Insufficient UUSDT balance for repayment");
+        return;
+      }
+
+      // Check current allowance
+      const currentAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
+
+      // If allowance is less than required amount, approve
+      if (currentAllowance < totalRepayment) {
+        try {
+          const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
+          await approveTx.wait();
+        } catch (error) {
+          console.error("Failed to approve UUSDT transfer:", error);
+          return;
+        }
+      }
+
+      // Double check allowance after approval
+      const newAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
+
+      const tx = await p2pBorrowLendingContract.repayLoan(loan.id);
       await tx.wait();
-      fetchUserLoans();
+
+      // Refresh all necessary states
+      await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
     } catch (error) {
       console.error("Repay error:", error);
+      // Log additional error details
+      if (error.data) {
+        console.error("Error data:", error.data);
+      }
+      if (error.transaction) {
+        console.error("Transaction details:", error.transaction);
+      }
+    } finally {
+      setRepayingLoans((prev) => ({ ...prev, [loanId]: false }));
     }
   };
 
@@ -296,7 +365,6 @@ const App = () => {
               <CardHeader className="bg-white/5 rounded-t-lg border-b border-[#2FFA98]/20">
                 {/* Kart başlığına ikon ekledik */}
                 <div className="flex items-center space-x-2 p-2">
-                  <Star className="w-6 h-6 text-[#2FFA98]" />
                   <h2 className="text-xl font-bold">Transactions</h2>
                 </div>
                 <Tabs defaultValue="borrow" className="w-full">
@@ -445,7 +513,7 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Loan Amount</p>
                                     <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.uusdtAmount ?? 0)} UUSDT
+                                      {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT
                                     </p>
                                   </div>
 
@@ -470,7 +538,7 @@ const App = () => {
                                     <div>
                                       <p className="text-sm text-gray-400">Collateral Amount</p>
                                       <p className="text-lg font-semibold">
-                                        {ethers.formatEther(offer.unit0Amount)} UNIT0
+                                        {ethers.formatEther(offer.unit0Amount || 0)} UNIT0
                                       </p>
                                     </div>
                                   )}
@@ -486,9 +554,11 @@ const App = () => {
 
                               <div className="flex flex-col justify-center">
                                 <Button
-                                  onClick={() => handleBorrowFromOffer(offer.id)}
+                                  onClick={() => {
+                                    handleBorrowFromOffer(offer.id);
+                                  }}
                                   disabled={isBorrowing}
-                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10
+                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10 cursor-pointer
     disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isBorrowing ? (
@@ -535,21 +605,21 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Borrowed Amount</p>
                                     <p className="text-lg font-semibold">
-                                      {ethers.formatEther(loan.uusdtAmount)} UUSDT
+                                      {ethers.formatEther(loan.uusdtAmount || 0)} UUSDT
                                     </p>
                                   </div>
 
                                   <div>
                                     <p className="text-sm text-gray-400">Collateral Locked</p>
                                     <p className="text-lg font-semibold">
-                                      {ethers.formatEther(loan.unit0Amount)} UNIT0
+                                      {ethers.formatEther(loan.unit0Amount || 0)} UNIT0
                                     </p>
                                   </div>
 
                                   <div>
                                     <p className="text-sm text-gray-400">Interest Rate</p>
                                     <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {loan.interestRate / 100}% APR
+                                      {Number(loan.interestRate) / 100}% APR
                                     </p>
                                   </div>
 
@@ -568,10 +638,14 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Status</p>
                                     <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {new Date(Number(loan.startTime) * 1000 + Number(loan.duration) * 60 * 1000) >
-                                      new Date()
-                                        ? "Active"
-                                        : "Expired"}
+                                      {loan.isActive
+                                        ? new Date(Number(loan.startTime) * 1000 + Number(loan.duration) * 60 * 1000) >
+                                          new Date()
+                                          ? "Active"
+                                          : "Expired"
+                                        : loan.isRepaid
+                                        ? "Repaid"
+                                        : "Defaulted"}
                                     </p>
                                   </div>
                                 </div>
@@ -590,9 +664,17 @@ const App = () => {
                                   <div className="flex space-x-3">
                                     <Button
                                       onClick={() => handleRepayLoan(loan.id)}
-                                      className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6"
+                                      disabled={repayingLoans[loan.id]}
+                                      className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
                                     >
-                                      Repay Loan
+                                      {repayingLoans[loan.id] ? (
+                                        <div className="flex items-center justify-center">
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                          Repaying...
+                                        </div>
+                                      ) : (
+                                        "Repay Loan"
+                                      )}
                                     </Button>
                                   </div>
                                 </div>
@@ -617,7 +699,7 @@ const App = () => {
                                     </p>
                                   </div>
                                   <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
-                                    <p className="text-sm text-[#2FFA98]">Offer #{index + 1}</p>
+                                    <p className="text-sm text-[#2FFA98]">Offer #{offer.id?.toString()}</p>
                                   </div>
                                 </div>
 
@@ -626,7 +708,7 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Available Amount</p>
                                     <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.uusdtAmount ?? 0)} UUSDT
+                                      {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT
                                     </p>
                                   </div>
 
@@ -650,7 +732,7 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Required UNIT0</p>
                                     <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.unit0Amount ?? 0)} UNIT0
+                                      {ethers.formatEther(offer.requiredUNIT0 || 0)} UNIT0
                                     </p>
                                   </div>
 
@@ -667,16 +749,25 @@ const App = () => {
                                   <div className="space-y-1">
                                     <p className="text-sm text-gray-400">Loan Terms</p>
                                     <p className="text-sm">
-                                      Borrow {ethers.formatEther(offer.uusdtAmount ?? 0)} UUSDT with{" "}
+                                      Borrow {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT with{" "}
                                       {offer.collateralRate}% collateral
                                     </p>
                                   </div>
 
                                   <Button
                                     onClick={() => handleBorrowFromOffer(offer.id)}
-                                    className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10"
+                                    disabled={isBorrowing}
+                                    className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10 cursor-pointer
+    disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    Borrow Now
+                                    {isBorrowing ? (
+                                      <div className="flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                        Borrowing...
+                                      </div>
+                                    ) : (
+                                      "Borrow Now"
+                                    )}
                                   </Button>
                                 </div>
                               </div>

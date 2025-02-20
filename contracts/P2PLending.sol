@@ -9,24 +9,19 @@ contract P2PLending is ReentrancyGuard, Ownable {
     IERC20 public uusdt;
     uint256 public unit0Rate; // 1 UNIT0 = kaç UUSDT (18 decimals)
     
-    // Skorlama sistemi sabitleri
-    uint256 public constant DEFAULT_SCORE = 70; // Yeni kullanıcı başlangıç skoru
-    uint256 public constant MAX_SCORE = 100;    // Maksimum skor
-    uint256 public constant MIN_SCORE = 0;      // Minimum skor
-    uint256 public constant SUCCESSFUL_PAYMENT_BONUS = 5; // Zamanında ödeme için bonus puan
-    uint256 public constant LATE_PAYMENT_PENALTY = 10;    // Geç ödeme için ceza puanı
-    uint256 public constant DEFAULT_PAYMENT_PENALTY = 20; // Temerrüt için ceza puanı
-    
     struct LendingOffer {
+        uint256 id;              // Teklif ID'si
         address lender;          // Borç veren
         uint256 uusdtAmount;     // UUSDT miktarı
         uint256 collateralRate;  // Teminat oranı (100 = %100)
         uint256 interestRate;    // Faiz oranı (1000 = %10)
         uint256 duration;        // Dakika cinsinden süre
+        uint256 requiredUNIT0;   // Gerekli UNIT0 teminat miktarı
         bool isActive;           // Teklif aktif mi?
     }
 
     struct Loan {
+        uint256 id;             // Kredi ID'si
         address lender;          // Borç veren
         address borrower;        // Borç alan
         uint256 uusdtAmount;     // UUSDT miktarı
@@ -36,25 +31,11 @@ contract P2PLending is ReentrancyGuard, Ownable {
         uint256 startTime;       // Başlangıç zamanı
         uint256 duration;        // Süre
         bool isActive;           // Kredi aktif mi?
-        LoanStatus status;       // Kredi durumu
-    }
-    
-    // Kredi durumları
-    enum LoanStatus {
-        ACTIVE,       // Aktif kredi
-        REPAID,       // Geri ödenmiş
-        DEFAULTED,    // Temerrüde düşmüş
-        EXPIRED       // Süresi dolmuş
+        bool isRepaid;          // Kredi geri ödendi mi?
     }
 
     uint256 public offerCount;
     uint256 public loanCount;
-    
-    // Kredi skorlama sistemi
-    mapping(address => uint256) public borrowerScores;
-    mapping(address => uint256) public borrowerLoanCount;
-    mapping(address => uint256) public borrowerSuccessCount;
-    mapping(address => uint256) public borrowerDefaultCount;
 
     mapping(uint256 => LendingOffer) public lendingOffers;
     mapping(uint256 => Loan) public loans;
@@ -66,11 +47,10 @@ contract P2PLending is ReentrancyGuard, Ownable {
     event LoanRepaid(uint256 indexed loanId, uint256 repayAmount);
     event CollateralClaimed(uint256 indexed loanId, uint256 unit0Amount);
     event EmergencyWithdraw(address token, uint256 amount);
-    event ScoreUpdated(address indexed borrower, uint256 previousScore, uint256 newScore, string reason);
 
-    constructor(address _uusdt, uint256 _initialRate) Ownable(msg.sender) {
+    constructor(address _uusdt) Ownable(msg.sender) {
         uusdt = IERC20(_uusdt);
-        unit0Rate = _initialRate;
+        unit0Rate = 1e18;
     }
 
     // UNIT0/UUSDT oranını güncelle
@@ -89,43 +69,6 @@ contract P2PLending is ReentrancyGuard, Ownable {
     function calculateUUSDTValue(uint256 unit0Amount) public view returns (uint256) {
         return (unit0Amount * unit0Rate) / 1e18;
     }
-    
-    // Borç alan skorunu getir
-    function getBorrowerScore(address borrower) public view returns (uint256) {
-        if (borrowerLoanCount[borrower] == 0) {
-            return DEFAULT_SCORE;
-        }
-        return borrowerScores[borrower];
-    }
-    
-    // Skor güncelleme
-    function _updateScore(address borrower, int256 scoreChange, string memory reason) internal {
-        uint256 currentScore = getBorrowerScore(borrower);
-        uint256 previousScore = currentScore;
-        
-        if (borrowerLoanCount[borrower] == 0) {
-            borrowerScores[borrower] = DEFAULT_SCORE;
-            currentScore = DEFAULT_SCORE;
-        }
-        
-        if (scoreChange > 0) {
-            uint256 positiveChange = uint256(scoreChange);
-            if (currentScore + positiveChange > MAX_SCORE) {
-                borrowerScores[borrower] = MAX_SCORE;
-            } else {
-                borrowerScores[borrower] = currentScore + positiveChange;
-            }
-        } else {
-            uint256 negativeChange = uint256(-scoreChange);
-            if (negativeChange >= currentScore) {
-                borrowerScores[borrower] = MIN_SCORE;
-            } else {
-                borrowerScores[borrower] = currentScore - negativeChange;
-            }
-        }
-        
-        emit ScoreUpdated(borrower, previousScore, borrowerScores[borrower], reason);
-    }
 
     // Borç verme teklifi oluştur
     function createOffer(
@@ -142,30 +85,31 @@ contract P2PLending is ReentrancyGuard, Ownable {
         uusdt.transferFrom(msg.sender, address(this), _uusdtAmount);
 
         offerCount++;
+        uint256 requiredUNIT0Amount = calculateRequiredUNIT0(_uusdtAmount, _collateralRate);
+
         lendingOffers[offerCount] = LendingOffer({
+            id: offerCount,
             lender: msg.sender,
             uusdtAmount: _uusdtAmount,
             collateralRate: _collateralRate,
             interestRate: _interestRate,
             duration: _duration,
+            requiredUNIT0: requiredUNIT0Amount,
             isActive: true
         });
 
-        uint256 requiredUNIT0 = calculateRequiredUNIT0(_uusdtAmount, _collateralRate);
-        emit OfferCreated(offerCount, msg.sender, _uusdtAmount, requiredUNIT0);
+        emit OfferCreated(offerCount, msg.sender, _uusdtAmount, requiredUNIT0Amount);
     }
 
     // Borç al
     function borrowFromOffer(uint256 _offerId) external payable nonReentrant {
         LendingOffer storage offer = lendingOffers[_offerId];
         require(offer.isActive, "Offer not active");
+        require(msg.value >= offer.requiredUNIT0, "Insufficient collateral");
 
-        uint256 requiredUNIT0 = calculateRequiredUNIT0(offer.uusdtAmount, offer.collateralRate);
-        require(msg.value >= requiredUNIT0, "Insufficient collateral");
-
-        // Yeni kredi oluştur
         loanCount++;
         loans[loanCount] = Loan({
+            id: loanCount,
             lender: offer.lender,
             borrower: msg.sender,
             uusdtAmount: offer.uusdtAmount,
@@ -175,16 +119,10 @@ contract P2PLending is ReentrancyGuard, Ownable {
             startTime: block.timestamp,
             duration: offer.duration,
             isActive: true,
-            status: LoanStatus.ACTIVE
+            isRepaid: false
         });
 
         userLoans[msg.sender].push(loanCount);
-        borrowerLoanCount[msg.sender]++;
-        
-        // Eğer ilk kredisi ise, varsayılan skoru ata
-        if (borrowerLoanCount[msg.sender] == 1) {
-            borrowerScores[msg.sender] = DEFAULT_SCORE;
-        }
         
         uusdt.transfer(msg.sender, offer.uusdtAmount);
         offer.isActive = false;
@@ -197,7 +135,11 @@ contract P2PLending is ReentrancyGuard, Ownable {
         Loan storage loan = loans[_loanId];
         require(loan.isActive, "Loan not active");
         require(msg.sender == loan.borrower, "Not the borrower");
-        
+        require(
+            block.timestamp <= loan.startTime + (loan.duration * 1 minutes),
+            "Loan expired"
+        );
+
         uint256 interest = (loan.uusdtAmount * loan.interestRate) / 1000;
         uint256 totalRepayment = loan.uusdtAmount + interest;
 
@@ -207,19 +149,7 @@ contract P2PLending is ReentrancyGuard, Ownable {
         require(sent, "Failed to return collateral");
 
         loan.isActive = false;
-        
-        // Kredi durumunu güncelle ve skoru artır
-        bool isOnTime = block.timestamp <= loan.startTime + (loan.duration * 1 minutes);
-        
-        if (isOnTime) {
-            loan.status = LoanStatus.REPAID;
-            borrowerSuccessCount[loan.borrower]++;
-            _updateScore(loan.borrower, int256(SUCCESSFUL_PAYMENT_BONUS), "On-time repayment bonus");
-        } else {
-            loan.status = LoanStatus.EXPIRED;
-            _updateScore(loan.borrower, -int256(LATE_PAYMENT_PENALTY), "Late repayment penalty");
-        }
-        
+        loan.isRepaid = true;  // Kredi başarıyla geri ödendi
         emit LoanRepaid(_loanId, totalRepayment);
     }
 
@@ -237,51 +167,47 @@ contract P2PLending is ReentrancyGuard, Ownable {
         require(sent, "Failed to transfer collateral");
 
         loan.isActive = false;
-        loan.status = LoanStatus.DEFAULTED;
-        
-        // Borç alanın skorunu düşür
-        borrowerDefaultCount[loan.borrower]++;
-        _updateScore(loan.borrower, -int256(DEFAULT_PAYMENT_PENALTY), "Default penalty");
-        
+        loan.isRepaid = false;  // Kredi geri ödenmedi, teminat alındı
         emit CollateralClaimed(_loanId, loan.unit0Amount);
     }
 
-    function getActiveOffers() external view returns (uint256[] memory) {
-        uint256[] memory activeOffers = new uint256[](offerCount);
+    function getActiveOffers() external view returns (LendingOffer[] memory) {
+        // Önce aktif teklif sayısını bul
         uint256 activeCount = 0;
-        
         for(uint256 i = 1; i <= offerCount; i++) {
             if(lendingOffers[i].isActive) {
-                activeOffers[activeCount] = i;
                 activeCount++;
             }
         }
+    
+        // Aktif teklifleri içerecek array oluştur
+        LendingOffer[] memory activeOffers = new LendingOffer[](activeCount);
+        uint256 currentIndex = 0;
         
-        uint256[] memory result = new uint256[](activeCount);
-        for(uint256 i = 0; i < activeCount; i++) {
-            result[i] = activeOffers[i];
+        // Aktif teklifleri doldur
+        for(uint256 i = 1; i <= offerCount; i++) {
+            if(lendingOffers[i].isActive) {
+                activeOffers[currentIndex] = lendingOffers[i];
+                currentIndex++;
+            }
         }
         
-        return result;
+        return activeOffers;
     }
 
-    function getUserLoans(address _user) external view returns (uint256[] memory) {
-        return userLoans[_user];
-    }
-    
-    // Borç alan istatistiklerini getir
-    function getBorrowerStats(address borrower) external view returns (
-        uint256 score,
-        uint256 totalLoans,
-        uint256 successfulLoans,
-        uint256 defaultedLoans
-    ) {
-        return (
-            getBorrowerScore(borrower),
-            borrowerLoanCount[borrower],
-            borrowerSuccessCount[borrower],
-            borrowerDefaultCount[borrower]
-        );
+    // Kullanıcı borçlarını getir
+    function getUserLoans(address _user) external view returns (Loan[] memory) {
+        uint256[] memory userLoanIds = userLoans[_user];
+        Loan[] memory userLoanDetails = new Loan[](userLoanIds.length);
+        
+        for(uint256 i = 0; i < userLoanIds.length; i++) {
+            Loan storage loan = loans[userLoanIds[i]];
+            require(loan.id == userLoanIds[i], "Loan ID mismatch");
+            require(loan.borrower == _user, "Loan borrower mismatch");
+            userLoanDetails[i] = loan;
+        }
+        
+        return userLoanDetails;
     }
 
     function getTestValues(uint256 _uusdtAmount, uint256 _collateralRate) external view returns (

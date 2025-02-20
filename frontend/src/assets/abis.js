@@ -504,75 +504,9 @@ export const p2pBorrowLendingAbi = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "_offerId",
-        type: "uint256",
-      },
-    ],
-    name: "borrowFromOffer",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_loanId",
-        type: "uint256",
-      },
-    ],
-    name: "claimCollateral",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_uusdtAmount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_collateralRate",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_interestRate",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_duration",
-        type: "uint256",
-      },
-    ],
-    name: "createOffer",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "emergencyWithdrawUNIT0",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
         internalType: "address",
         name: "_uusdt",
         type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "_initialRate",
-        type: "uint256",
       },
     ],
     stateMutability: "nonpayable",
@@ -637,13 +571,6 @@ export const p2pBorrowLendingAbi = [
     ],
     name: "EmergencyWithdraw",
     type: "event",
-  },
-  {
-    inputs: [],
-    name: "emergencyWithdrawUUSDT",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
   },
   {
     anonymous: false,
@@ -759,58 +686,21 @@ export const p2pBorrowLendingAbi = [
     type: "event",
   },
   {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_loanId",
-        type: "uint256",
-      },
-    ],
-    name: "repayLoan",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "newRate",
-        type: "uint256",
-      },
-    ],
-    name: "setUNIT0Rate",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     stateMutability: "payable",
     type: "fallback",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_offerId",
+        type: "uint256",
+      },
+    ],
+    name: "borrowFromOffer",
+    outputs: [],
     stateMutability: "payable",
-    type: "receive",
+    type: "function",
   },
   {
     inputs: [
@@ -856,11 +746,71 @@ export const p2pBorrowLendingAbi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_loanId",
+        type: "uint256",
+      },
+    ],
+    name: "claimCollateral",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_uusdtAmount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_collateralRate",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_interestRate",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_duration",
+        type: "uint256",
+      },
+    ],
+    name: "createOffer",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "emergencyWithdrawUNIT0",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "emergencyWithdrawUUSDT",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "getActiveOffers",
     outputs: [
       {
         components: [
+          {
+            internalType: "uint256",
+            name: "id",
+            type: "uint256",
+          },
           {
             internalType: "address",
             name: "lender",
@@ -884,6 +834,11 @@ export const p2pBorrowLendingAbi = [
           {
             internalType: "uint256",
             name: "duration",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "requiredUNIT0",
             type: "uint256",
           },
           {
@@ -940,9 +895,66 @@ export const p2pBorrowLendingAbi = [
     name: "getUserLoans",
     outputs: [
       {
-        internalType: "uint256[]",
+        components: [
+          {
+            internalType: "uint256",
+            name: "id",
+            type: "uint256",
+          },
+          {
+            internalType: "address",
+            name: "lender",
+            type: "address",
+          },
+          {
+            internalType: "address",
+            name: "borrower",
+            type: "address",
+          },
+          {
+            internalType: "uint256",
+            name: "uusdtAmount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "unit0Amount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "collateralRate",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "interestRate",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "startTime",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "duration",
+            type: "uint256",
+          },
+          {
+            internalType: "bool",
+            name: "isActive",
+            type: "bool",
+          },
+          {
+            internalType: "bool",
+            name: "isRepaid",
+            type: "bool",
+          },
+        ],
+        internalType: "struct P2PLending.Loan[]",
         name: "",
-        type: "uint256[]",
+        type: "tuple[]",
       },
     ],
     stateMutability: "view",
@@ -958,6 +970,11 @@ export const p2pBorrowLendingAbi = [
     ],
     name: "lendingOffers",
     outputs: [
+      {
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
       {
         internalType: "address",
         name: "lender",
@@ -981,6 +998,11 @@ export const p2pBorrowLendingAbi = [
       {
         internalType: "uint256",
         name: "duration",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "requiredUNIT0",
         type: "uint256",
       },
       {
@@ -1015,6 +1037,11 @@ export const p2pBorrowLendingAbi = [
     ],
     name: "loans",
     outputs: [
+      {
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
       {
         internalType: "address",
         name: "lender",
@@ -1060,6 +1087,11 @@ export const p2pBorrowLendingAbi = [
         name: "isActive",
         type: "bool",
       },
+      {
+        internalType: "bool",
+        name: "isRepaid",
+        type: "bool",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -1088,6 +1120,52 @@ export const p2pBorrowLendingAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_loanId",
+        type: "uint256",
+      },
+    ],
+    name: "repayLoan",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "newRate",
+        type: "uint256",
+      },
+    ],
+    name: "setUNIT0Rate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
+    ],
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -1139,5 +1217,9 @@ export const p2pBorrowLendingAbi = [
     ],
     stateMutability: "view",
     type: "function",
+  },
+  {
+    stateMutability: "payable",
+    type: "receive",
   },
 ];
