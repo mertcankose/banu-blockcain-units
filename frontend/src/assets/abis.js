@@ -643,6 +643,31 @@ export const p2pBorrowLendingAbi = [
         name: "uusdtAmount",
         type: "uint256",
       },
+    ],
+    name: "OfferCancelled",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "offerId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "lender",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "uusdtAmount",
+        type: "uint256",
+      },
       {
         indexed: false,
         internalType: "uint256",
@@ -670,6 +695,51 @@ export const p2pBorrowLendingAbi = [
       },
     ],
     name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "offerId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "feeAmount",
+        type: "uint256",
+      },
+    ],
+    name: "PlatformFeePaid",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newRate",
+        type: "uint256",
+      },
+    ],
+    name: "PlatformFeeRateUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "PlatformFeesWithdrawn",
     type: "event",
   },
   {
@@ -730,19 +800,13 @@ export const p2pBorrowLendingAbi = [
     inputs: [
       {
         internalType: "uint256",
-        name: "unit0Amount",
+        name: "_offerId",
         type: "uint256",
       },
     ],
-    name: "calculateUUSDTValue",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
+    name: "cancelOffer",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -850,35 +914,6 @@ export const p2pBorrowLendingAbi = [
         internalType: "struct P2PLending.LendingOffer[]",
         name: "",
         type: "tuple[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_uusdtAmount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_collateralRate",
-        type: "uint256",
-      },
-    ],
-    name: "getTestValues",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "requiredUNIT0",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "uusdtValue",
-        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -1124,6 +1159,19 @@ export const p2pBorrowLendingAbi = [
   },
   {
     inputs: [],
+    name: "platformFeeRate",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "renounceOwnership",
     outputs: [],
     stateMutability: "nonpayable",
@@ -1138,6 +1186,19 @@ export const p2pBorrowLendingAbi = [
       },
     ],
     name: "repayLoan",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_newRate",
+        type: "uint256",
+      },
+    ],
+    name: "setPlatformFeeRate",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -1216,6 +1277,13 @@ export const p2pBorrowLendingAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "withdrawPlatformFees",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

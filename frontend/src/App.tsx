@@ -1,20 +1,20 @@
 // @ts-nocheck
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
-import { EthersAdapter } from "@reown/appkit-adapter-ethers";
-import { mainnet, sepolia } from "@reown/appkit/networks";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
+import { createAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
+import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 import { ethers, BrowserProvider } from "ethers";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import { Edit, Send, Star, Wallet } from "lucide-react";
+import { Edit, Info, Send, Star, Wallet } from "lucide-react";
 import backgroundImage from "@/assets/background.jpg";
 import { uusdtTokenAbi, p2pBorrowLendingAbi } from "@/assets/abis";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const projectId = "415b280d7f14fd394fac17ffed28e6db";
+
 const metadata = {
   name: "banuchain-dapp",
   description: "Banuchain Dapp",
@@ -54,54 +54,38 @@ createAppKit({
 });
 
 const App = () => {
-  // CONTRACT ADDRESSES
   const UUSDT_TOKEN_ADDRESS = "0xC46643d498067CA186505E2eCD3c4A41A4b76dA0";
-  const P2PBORROWLENDING_ADDRESS = "0x5dD54EB84A59aE635B7f0fa2F1954Ab89D5b9c37";
+  const P2PBORROWLENDING_ADDRESS = "0xd20F9909e920e2ce83c0392B063A6B947d6d49AD";
 
-  // WALLET
   const { walletProvider } = useAppKitProvider("eip155");
   const { address, isConnected } = useAppKitAccount();
 
-  // BALANCE
   const [unitsBalance, setUnitsBalance] = useState("0");
   const [uusdtBalance, setUusdtBalance] = useState("0");
   const [provider, setProvider] = useState(null);
-  const [dummyTransactions, setDummyTransactions] = useState([]);
 
-  // CONTRACTS
   const [uusdtTokenContract, setUusdtTokenContract] = useState(null);
   const [p2pBorrowLendingContract, setP2pBorrowLendingContract] = useState(null);
 
-  // STATES
   const [activeOffers, setActiveOffers] = useState([]);
   const [userLoans, setUserLoans] = useState([]);
   const [repayingLoans, setRepayingLoans] = useState({});
   const [lendingValues, setLendingValues] = useState({
-    uusdtAmount: "", // Normal rakam girecek (örn: 100)
-    collateralRate: "", // Normal yüzde girecek (örn: 150)
-    interestRate: "", // Normal yüzde girecek (örn: 10)
-    duration: "", // Dakika girecek (örn: 30)
+    uusdtAmount: "",
+    collateralRate: "",
+    interestRate: "",
+    duration: "",
   });
 
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [isBorrowing, setIsBorrowing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
-  /* animation */
   useEffect(() => {
     AOS.init({
       duration: 1000,
       once: true,
     });
-  }, []);
-
-  useEffect(() => {
-    // Generate 15 dummy transactions
-    const transactions = Array.from({ length: 15 }, (_, i) => ({
-      address: `0x${(Math.random() * 1e12).toString(16).padStart(12, "0")}`,
-      amount: (Math.random() * 20).toFixed(2),
-      rate: (Math.random() * 15).toFixed(2),
-    }));
-    setDummyTransactions(transactions);
   }, []);
 
   useEffect(() => {
@@ -121,7 +105,7 @@ const App = () => {
 
   useEffect(() => {
     initContracts();
-  }, [address, uusdtTokenAbi, p2pBorrowLendingAbi, isConnected, provider]);
+  }, [address, isConnected, provider]);
 
   useEffect(() => {
     if (p2pBorrowLendingContract && address) {
@@ -130,7 +114,6 @@ const App = () => {
     }
   }, [p2pBorrowLendingContract, address]);
 
-  // CONTRACTLARI BAŞLATMA
   const initContracts = async () => {
     try {
       if (!isConnected || !provider) {
@@ -141,7 +124,6 @@ const App = () => {
 
       const signer = await provider.getSigner();
       const newUusdtTokenContract = new ethers.Contract(UUSDT_TOKEN_ADDRESS, uusdtTokenAbi, signer);
-
       const newP2pBorrowLendingContract = new ethers.Contract(P2PBORROWLENDING_ADDRESS, p2pBorrowLendingAbi, signer);
 
       setUusdtTokenContract(newUusdtTokenContract);
@@ -150,17 +132,14 @@ const App = () => {
       console.error("Contract initialization error:", err);
       setUusdtTokenContract(null);
       setP2pBorrowLendingContract(null);
-    } finally {
     }
   };
 
   const fetchBalances = async () => {
     try {
       if (!isConnected || !provider || !uusdtTokenContract) return;
-
       const unit0Bal = await provider.getBalance(address);
       const uusdtBal = await uusdtTokenContract.balanceOf(address);
-
       setUnitsBalance(ethers.formatEther(unit0Bal));
       setUusdtBalance(ethers.formatEther(uusdtBal));
     } catch (err) {
@@ -181,11 +160,15 @@ const App = () => {
     }
   };
 
-  // Kullanıcı borçlarını getir
   const fetchUserLoans = async () => {
     if (!p2pBorrowLendingContract || !address) return;
-    const loans = await p2pBorrowLendingContract.getUserLoans(address);
-    setUserLoans(loans);
+    try {
+      const loans = await p2pBorrowLendingContract.getUserLoans(address);
+      setUserLoans(loans);
+    } catch (error) {
+      console.error("Error fetching user loans:", error);
+      setUserLoans([]);
+    }
   };
 
   const handleCreateOffer = async () => {
@@ -195,14 +178,8 @@ const App = () => {
       const currentAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
 
       if (currentAllowance < BigInt(uusdtAmount.toString())) {
-        const approveAmount = ethers.MaxUint256;
-        try {
-          const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, approveAmount);
-          await approveTx.wait();
-        } catch (error) {
-          console.error("Approval failed:", error);
-          return;
-        }
+        const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
+        await approveTx.wait();
       }
 
       const collateralRate = Number(lendingValues.collateralRate);
@@ -211,7 +188,8 @@ const App = () => {
 
       const tx = await p2pBorrowLendingContract.createOffer(uusdtAmount, collateralRate, interestRate, duration);
       await tx.wait();
-      fetchActiveOffers();
+      await fetchActiveOffers();
+      await fetchBalances();
 
       setLendingValues({
         uusdtAmount: "",
@@ -226,21 +204,31 @@ const App = () => {
     }
   };
 
+  const handleCancelOffer = async (offerId) => {
+    setIsCancelling(true);
+    try {
+      const tx = await p2pBorrowLendingContract.cancelOffer(offerId);
+      await tx.wait();
+      await fetchActiveOffers();
+      await fetchBalances();
+    } catch (error) {
+      console.error("Cancel offer error:", error);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleBorrowFromOffer = async (offerId) => {
     setIsBorrowing(true);
     try {
       const offer = activeOffers.find((offer) => offer.id.toString() === offerId.toString());
-      if (!offer) {
-        console.error("Offer not found");
-        return;
-      }
+      if (!offer) return;
 
       const tx = await p2pBorrowLendingContract.borrowFromOffer(offer.id, {
         value: offer.requiredUNIT0,
       });
       await tx.wait();
-      fetchUserLoans();
-      fetchActiveOffers();
+      await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
     } catch (error) {
       console.error("Borrow error:", error);
     } finally {
@@ -251,88 +239,25 @@ const App = () => {
   const handleRepayLoan = async (loanId) => {
     setRepayingLoans((prev) => ({ ...prev, [loanId]: true }));
     try {
-      // Get loan details
       const loan = userLoans.find((loan) => loan.id.toString() === loanId.toString());
-      if (!loan) {
-        console.error("Loan not found");
-        return;
-      }
+      if (!loan) return;
 
-      // Check if loan is active and not expired
-      const currentTime = Math.floor(Date.now() / 1000);
-      const loanEndTime = Number(loan.startTime) + Number(loan.duration) * 60;
-
-      if (!loan.isActive) {
-        console.error("Loan is not active");
-        return;
-      }
-
-      if (currentTime > loanEndTime) {
-        console.error("Loan has expired");
-        return;
-      }
-
-      // Calculate total repayment amount (principal + interest)
       const interest = (BigInt(loan.uusdtAmount) * BigInt(loan.interestRate)) / BigInt(1000);
       const totalRepayment = BigInt(loan.uusdtAmount) + interest;
 
-      console.log("Repayment details:", {
-        loanId: loan.id.toString(),
-        principal: ethers.formatEther(loan.uusdtAmount),
-        interest: ethers.formatEther(interest),
-        totalRepayment: ethers.formatEther(totalRepayment),
-      });
-
-      // Check UUSDT balance
-      const uusdtBalance = await uusdtTokenContract.balanceOf(address);
-      if (uusdtBalance < totalRepayment) {
-        console.error("Insufficient UUSDT balance for repayment");
-        return;
-      }
-
-      // Check current allowance
       const currentAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
-
-      // If allowance is less than required amount, approve
       if (currentAllowance < totalRepayment) {
-        try {
-          const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
-          await approveTx.wait();
-        } catch (error) {
-          console.error("Failed to approve UUSDT transfer:", error);
-          return;
-        }
+        const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
+        await approveTx.wait();
       }
-
-      // Double check allowance after approval
-      const newAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
 
       const tx = await p2pBorrowLendingContract.repayLoan(loan.id);
       await tx.wait();
-
-      // Refresh all necessary states
       await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
     } catch (error) {
       console.error("Repay error:", error);
-      // Log additional error details
-      if (error.data) {
-        console.error("Error data:", error.data);
-      }
-      if (error.transaction) {
-        console.error("Transaction details:", error.transaction);
-      }
     } finally {
       setRepayingLoans((prev) => ({ ...prev, [loanId]: false }));
-    }
-  };
-
-  const handleClaimCollateral = async (loanId) => {
-    try {
-      const tx = await p2pBorrowLendingContract.claimCollateral(loanId);
-      await tx.wait();
-      fetchActiveOffers();
-    } catch (error) {
-      console.error("Claim error:", error);
     }
   };
 
@@ -345,10 +270,8 @@ const App = () => {
         backgroundPosition: "center",
       }}
     >
-      {/* İsteğe bağlı grid deseni overlay */}
-      <div className="absolute inset-0 bg-[url('/path/to/your-grid-image.png')] bg-repeat opacity-5 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-repeat opacity-5 pointer-events-none"></div>
 
-      {/* Header */}
       <header className="bg-transparent" data-aos="fade-down">
         <div className="container mx-auto px-6 py-6 flex justify-between items-center">
           <div className="text-2xl font-bold tracking-wider text-[#2FFA98]">LOGO</div>
@@ -356,38 +279,25 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-6 py-12 relative">
         <div className="grid grid-cols-4 gap-8">
-          {/* Ana kısım (3 kolon) */}
           <div className="col-span-4" data-aos="fade-right">
             <Card className="border border-[#2FFA98]/20 shadow-xl bg-white/5 backdrop-blur-sm text-white">
               <CardHeader className="bg-white/5 rounded-t-lg border-b border-[#2FFA98]/20">
-                {/* Kart başlığına ikon ekledik */}
                 <div className="flex items-center space-x-2 p-2">
-                  <h2 className="text-xl font-bold">Transactions</h2>
+                  <h2 className="text-xl font-bold">P2P Lending Platform</h2>
                 </div>
                 <Tabs defaultValue="borrow" className="w-full">
                   <TabsList className="grid w-full max-w-[400px] grid-cols-2">
                     <TabsTrigger
                       value="borrow"
-                      className="
-                        data-[state=active]:bg-gradient-to-r
-                        data-[state=active]:from-[#2FFA98]
-                        data-[state=active]:to-[#22DD7B]
-                        data-[state=active]:text-black
-                      "
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2FFA98] data-[state=active]:to-[#22DD7B] data-[state=active]:text-black"
                     >
                       Borrow
                     </TabsTrigger>
                     <TabsTrigger
                       value="lending"
-                      className="
-                        data-[state=active]:bg-gradient-to-r
-                        data-[state=active]:from-[#2FFA98]
-                        data-[state=active]:to-[#22DD7B]
-                        data-[state=active]:text-black
-                      "
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2FFA98] data-[state=active]:to-[#22DD7B] data-[state=active]:text-black"
                     >
                       Lending
                     </TabsTrigger>
@@ -395,7 +305,7 @@ const App = () => {
 
                   <TabsContent value="lending" className="mt-6">
                     <div className="space-y-6">
-                      {/* Kredi Teklifi Oluştur */}
+                      {/* Create Offer Form */}
                       <div className="bg-white/5 p-6 rounded-lg shadow-md border border-[#2FFA98]/20">
                         <div className="mb-6">
                           <h3 className="text-xl font-semibold text-[#2FFA98] mb-2">Create Lending Offer</h3>
@@ -403,362 +313,193 @@ const App = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             <label className="text-sm text-gray-300">Amount (UUSDT)</label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                value={lendingValues.uusdtAmount}
-                                onChange={(e) => setLendingValues({ ...lendingValues, uusdtAmount: e.target.value })}
-                                placeholder="100"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                UUSDT
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-400">Enter the amount you want to lend</p>
+                            <Input
+                              type="number"
+                              value={lendingValues.uusdtAmount}
+                              onChange={(e) => setLendingValues({ ...lendingValues, uusdtAmount: e.target.value })}
+                              placeholder="100"
+                              className="bg-black/20 border-[#2FFA98]/20"
+                            />
+                            <p className="text-xs text-gray-400 ml-1.5">Enter the amount of UUSDT you want to lend</p>
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Collateral Rate</label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                value={lendingValues.collateralRate}
-                                onChange={(e) => setLendingValues({ ...lendingValues, collateralRate: e.target.value })}
-                                placeholder="150"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-12 h-12"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
-                            </div>
-                            <p className="text-xs text-gray-400">Example: 150 means 150% collateral required</p>
+                          <div className="space-y-1.5">
+                            <label className="text-sm text-gray-300">Collateral Rate (%)</label>
+                            <Input
+                              type="number"
+                              value={lendingValues.collateralRate}
+                              onChange={(e) => setLendingValues({ ...lendingValues, collateralRate: e.target.value })}
+                              placeholder="150"
+                              className="bg-black/20 border-[#2FFA98]/20"
+                            />
+                            <p className="text-xs text-gray-400 ml-1.5">
+                              Example: 150 means borrower needs to deposit 150% collateral
+                            </p>
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Interest Rate</label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                value={lendingValues.interestRate}
-                                onChange={(e) => setLendingValues({ ...lendingValues, interestRate: e.target.value })}
-                                placeholder="10"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-12 h-12"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
-                            </div>
-                            <p className="text-xs text-gray-400">Enter direct percentage (e.g., 10 for 10%)</p>
+                          <div className="space-y-1.5">
+                            <label className="text-sm text-gray-300">Interest Rate (%)</label>
+                            <Input
+                              type="number"
+                              value={lendingValues.interestRate}
+                              onChange={(e) => setLendingValues({ ...lendingValues, interestRate: e.target.value })}
+                              placeholder="10"
+                              className="bg-black/20 border-[#2FFA98]/20"
+                            />
+                            <p className="text-xs text-gray-400 ml-1.5">
+                              Annual interest rate (e.g., 10 means 10% APR)
+                            </p>
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Duration</label>
-                            <div className="relative">
-                              <Input
-                                type="number"
-                                value={lendingValues.duration}
-                                onChange={(e) => setLendingValues({ ...lendingValues, duration: e.target.value })}
-                                placeholder="30"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                mins
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-400">Enter duration in minutes</p>
+                          <div className="space-y-1.5">
+                            <label className="text-sm text-gray-300">Duration (minutes)</label>
+                            <Input
+                              type="number"
+                              value={lendingValues.duration}
+                              onChange={(e) => setLendingValues({ ...lendingValues, duration: e.target.value })}
+                              placeholder="30"
+                              className="bg-black/20 border-[#2FFA98]/20"
+                            />
+                            <p className="text-xs text-gray-400 ml-1.5">
+                              Loan duration in minutes (max: 525600 = 1 year)
+                            </p>
                           </div>
                         </div>
 
+                        {/* Fee Summary */}
                         <div className="mb-4 p-4 bg-black/20 rounded-lg">
                           <h4 className="text-sm font-semibold text-[#2FFA98] mb-2">Summary</h4>
-                          <p className="text-sm text-gray-300">
-                            You will lend {lendingValues.uusdtAmount || "0"} UUSDT <br />
-                            Borrower needs to provide {lendingValues.collateralRate || "0"}% collateral in UNIT0 <br />
-                            Interest rate is {lendingValues.interestRate || "0"}% <br />
-                            Loan duration is {lendingValues.duration || "0"} minutes
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-300">Lending Amount:</span>
+                              <span>{lendingValues.uusdtAmount || "0"} UUSDT</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-[#2FFA98]">Platform Fee (1%):</span>
+                              <span className="text-[#2FFA98]">
+                                {lendingValues.uusdtAmount
+                                  ? (Number(lendingValues.uusdtAmount) * 0.01).toFixed(5)
+                                  : "0"}{" "}
+                                UUSDT
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm font-bold pt-2 border-t border-[#2FFA98]/20">
+                              <span>Total Required:</span>
+                              <span>
+                                {lendingValues.uusdtAmount
+                                  ? (Number(lendingValues.uusdtAmount) * 1.01).toFixed(5)
+                                  : "0"}{" "}
+                                UUSDT
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Fee Info Box */}
+                        <div className="mb-4 p-4 bg-black/20 rounded-lg border border-[#2FFA98]/20">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Info className="w-4 h-4 text-[#2FFA98]" />
+                            <h4 className="text-sm font-semibold text-[#2FFA98]">Platform Fee Info</h4>
+                          </div>
+                          <p className="text-xs text-gray-300">
+                            • Platform charges 1% fee on the lending amount
+                            <br />
+                            • You can cancel your offer anytime before it's borrowed
+                            <br />• If you cancel, you'll get your UUSDT back (excluding platform fee)
                           </p>
                         </div>
 
                         <Button
                           onClick={handleCreateOffer}
                           disabled={isCreatingOffer}
-                          className="w-full bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] h-12 
-    text-black font-semibold rounded-lg hover:opacity-90 cursor-pointer
-    disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] h-12 text-black font-semibold cursor-pointer"
                         >
                           {isCreatingOffer ? (
                             <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                               Creating...
                             </div>
                           ) : (
-                            "Create Lending Offer"
+                            "Create Offer"
                           )}
                         </Button>
                       </div>
 
-                      {/* Aktif Teklifler Listesi */}
+                      {/* Active Offers List */}
                       <div className="space-y-4">
-                        {activeOffers.map((offer, index) => (
-                          <div key={index} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
-                            <div className="flex justify-between">
-                              <div className="space-y-2">
+                        {activeOffers.map((offer) =>
+                          offer.lender.toLowerCase() === address?.toLowerCase() ? (
+                            <div key={offer.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
+                              <div className="flex items-center justify-between pb-4 border-b border-[#2FFA98]/20">
                                 <div className="flex items-center space-x-2">
                                   <Wallet className="w-5 h-5 text-[#2FFA98]" />
                                   <p className="text-sm text-gray-300">
-                                    Lender: {offer.lender?.slice(0, 6)}...{offer.lender?.slice(-4)}
+                                    {offer.lender.toLowerCase() === address?.toLowerCase()
+                                      ? "Your Offer"
+                                      : `Lender: ${offer.lender?.slice(0, 6)}...${offer.lender?.slice(-4)}`}
                                   </p>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm text-gray-400">Loan Amount</p>
-                                    <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Collateral Required</p>
-                                    <p className="text-lg font-semibold">{offer.collateralRate}%</p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Interest Rate</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {Number(offer.interestRate) / 100}% APR
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Duration</p>
-                                    <p className="text-lg font-semibold">{offer.duration} minutes</p>
-                                  </div>
-
-                                  {offer.unit0Amount && (
-                                    <div>
-                                      <p className="text-sm text-gray-400">Collateral Amount</p>
-                                      <p className="text-lg font-semibold">
-                                        {ethers.formatEther(offer.unit0Amount || 0)} UNIT0
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Status</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {offer.isActive ? "Active" : "Inactive"}
-                                    </p>
-                                  </div>
+                                <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
+                                  <p className="text-sm text-[#2FFA98]">#{offer.id?.toString()}</p>
                                 </div>
                               </div>
 
-                              <div className="flex flex-col justify-center">
-                                <Button
-                                  onClick={() => {
-                                    handleBorrowFromOffer(offer.id);
-                                  }}
-                                  disabled={isBorrowing}
-                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10 cursor-pointer
-    disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {isBorrowing ? (
-                                    <div className="flex items-center justify-center">
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                                      Borrowing...
-                                    </div>
-                                  ) : (
-                                    "Borrow Now"
-                                  )}
-                                </Button>
-                                <p className="text-xs text-gray-400 mt-2 text-center">Ends in: {offer.duration} min</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="borrow" className="mt-6">
-                    <div className="space-y-6">
-                      {/* Mevcut Borçlar */}
-                      <div className="space-y-4">
-                        {userLoans.map((loan, index) => (
-                          <div key={index} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
-                            <div className="flex justify-between">
-                              <div className="space-y-4 w-full">
-                                {/* Üst Kısım - Temel Bilgiler */}
-                                <div className="flex items-center justify-between pb-4 border-b border-[#2FFA98]/20">
-                                  <div className="flex items-center space-x-2">
-                                    <Wallet className="w-5 h-5 text-[#2FFA98]" />
-                                    <p className="text-sm text-gray-300">
-                                      Lender: {loan.lender?.slice(0, 6)}...{loan.lender?.slice(-4)}
-                                    </p>
-                                  </div>
-                                  <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
-                                    <p className="text-sm text-[#2FFA98]">Loan #{loan.id?.toString()}</p>
-                                  </div>
+                              <div className="grid grid-cols-3 gap-4 my-4">
+                                <div>
+                                  <p className="text-sm text-gray-400">Lending Amount</p>
+                                  <p className="text-lg font-semibold">{ethers.formatEther(offer.uusdtAmount)} UUSDT</p>
                                 </div>
-
-                                {/* Ana Bilgiler Grid */}
-                                <div className="grid grid-cols-3 gap-6">
-                                  <div>
-                                    <p className="text-sm text-gray-400">Borrowed Amount</p>
-                                    <p className="text-lg font-semibold">
-                                      {ethers.formatEther(loan.uusdtAmount || 0)} UUSDT
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Collateral Locked</p>
-                                    <p className="text-lg font-semibold">
-                                      {ethers.formatEther(loan.unit0Amount || 0)} UNIT0
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Interest Rate</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {Number(loan.interestRate) / 100}% APR
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Start Time</p>
-                                    <p className="text-lg font-semibold">
-                                      {new Date(Number(loan.startTime) * 1000).toLocaleDateString()}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Duration</p>
-                                    <p className="text-lg font-semibold">{loan.duration} minutes</p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Status</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {loan.isActive
-                                        ? new Date(Number(loan.startTime) * 1000 + Number(loan.duration) * 60 * 1000) >
-                                          new Date()
-                                          ? "Active"
-                                          : "Expired"
-                                        : loan.isRepaid
-                                        ? "Repaid"
-                                        : "Defaulted"}
-                                    </p>
-                                  </div>
+                                <div>
+                                  <p className="text-sm text-gray-400">Platform Fee</p>
+                                  <p className="text-lg font-semibold text-[#2FFA98]">
+                                    {(Number(ethers.formatEther(offer.uusdtAmount)) * 0.01).toFixed(5)} UUSDT
+                                  </p>
                                 </div>
-
-                                {/* Alt Kısım - Butonlar ve Özet */}
-                                <div className="flex justify-between items-center pt-4 border-t border-[#2FFA98]/20">
-                                  <div className="text-sm text-gray-400">
-                                    <p>
-                                      Expires:{" "}
-                                      {new Date(
-                                        Number(loan.startTime) * 1000 + Number(loan.duration) * 60 * 1000
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-
-                                  <div className="flex space-x-3">
-                                    <Button
-                                      onClick={() => handleRepayLoan(loan.id)}
-                                      disabled={repayingLoans[loan.id]}
-                                      className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
-                                    >
-                                      {repayingLoans[loan.id] ? (
-                                        <div className="flex items-center justify-center">
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                                          Repaying...
-                                        </div>
-                                      ) : (
-                                        "Repay Loan"
-                                      )}
-                                    </Button>
-                                  </div>
+                                <div>
+                                  <p className="text-sm text-gray-400">Interest Rate</p>
+                                  <p className="text-lg font-semibold">{Number(offer.interestRate) / 100}%</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-400">Required UNIT0</p>
+                                  <p className="text-lg font-semibold">
+                                    {ethers.formatEther(offer.requiredUNIT0)} UNIT0
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-400">Duration</p>
+                                  <p className="text-lg font-semibold">{offer.duration} minutes</p>
+                                </div>
+                                <div>
+                                  <p className="text-sm text-gray-400">Status</p>
+                                  <p className="text-lg font-semibold text-[#2FFA98]">
+                                    {offer.isActive ? "Active" : "Inactive"}
+                                  </p>
                                 </div>
                               </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
 
-                      {/* Aktif Borç Teklifleri */}
-                      <div className="space-y-4">
-                        {activeOffers.map((offer, index) => (
-                          <div key={index} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
-                            <div className="flex justify-between">
-                              <div className="space-y-4 w-full">
-                                {/* Üst Kısım */}
-                                <div className="flex items-center justify-between pb-4 border-b border-[#2FFA98]/20">
-                                  <div className="flex items-center space-x-2">
-                                    <Wallet className="w-5 h-5 text-[#2FFA98]" />
-                                    <p className="text-sm text-gray-300">
-                                      Lender: {offer.lender?.slice(0, 6)}...{offer.lender?.slice(-4)}
-                                    </p>
-                                  </div>
-                                  <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
-                                    <p className="text-sm text-[#2FFA98]">Offer #{offer.id?.toString()}</p>
-                                  </div>
-                                </div>
-
-                                {/* Ana Grid */}
-                                <div className="grid grid-cols-3 gap-6">
-                                  <div>
-                                    <p className="text-sm text-gray-400">Available Amount</p>
-                                    <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Required Collateral</p>
-                                    <p className="text-lg font-semibold">{offer.collateralRate}%</p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Interest Rate</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {Number(offer.interestRate) / 100}% APR
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Duration</p>
-                                    <p className="text-lg font-semibold">{offer.duration} minutes</p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Required UNIT0</p>
-                                    <p className="text-lg font-semibold">
-                                      {ethers.formatEther(offer.requiredUNIT0 || 0)} UNIT0
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <p className="text-sm text-gray-400">Status</p>
-                                    <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {offer.isActive ? "Active" : "Inactive"}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Alt Kısım */}
-                                <div className="flex justify-between items-center pt-4 border-t border-[#2FFA98]/20">
-                                  <div className="space-y-1">
-                                    <p className="text-sm text-gray-400">Loan Terms</p>
-                                    <p className="text-sm">
-                                      Borrow {ethers.formatEther(offer.uusdtAmount || 0)} UUSDT with{" "}
-                                      {offer.collateralRate}% collateral
-                                    </p>
-                                  </div>
-
+                              <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
+                                {offer.lender.toLowerCase() === address?.toLowerCase() ? (
+                                  <Button
+                                    onClick={() => handleCancelOffer(offer.id)}
+                                    disabled={isCancelling}
+                                    className="bg-red-500 hover:bg-red-600 px-6 cursor-pointer"
+                                  >
+                                    {isCancelling ? (
+                                      <div className="flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                        Cancelling...
+                                      </div>
+                                    ) : (
+                                      "Cancel Offer"
+                                    )}
+                                  </Button>
+                                ) : (
                                   <Button
                                     onClick={() => handleBorrowFromOffer(offer.id)}
                                     disabled={isBorrowing}
-                                    className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10 cursor-pointer
-    disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
                                   >
                                     {isBorrowing ? (
                                       <div className="flex items-center justify-center">
@@ -769,8 +510,153 @@ const App = () => {
                                       "Borrow Now"
                                     )}
                                   </Button>
-                                </div>
+                                )}
                               </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-sm text-gray-400">No active offers</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Borrow Tab Content */}
+                  <TabsContent value="borrow" className="mt-6">
+                    <div className="space-y-6">
+                      {/* Your Active Loans */}
+                      <div className="space-y-4">
+                        {userLoans.map((loan) => (
+                          <div key={loan.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
+                            <div className="flex justify-between items-center pb-4 border-b border-[#2FFA98]/20">
+                              <div className="flex items-center space-x-2">
+                                <Wallet className="w-5 h-5 text-[#2FFA98]" />
+                                <p className="text-sm text-gray-300">
+                                  Lender: {loan.lender?.slice(0, 6)}...{loan.lender?.slice(-4)}
+                                </p>
+                              </div>
+                              <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
+                                <p className="text-sm text-[#2FFA98]">Loan #{loan.id?.toString()}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4 my-4">
+                              <div>
+                                <p className="text-sm text-gray-400">Borrowed Amount</p>
+                                <p className="text-lg font-semibold">{ethers.formatEther(loan.uusdtAmount)} UUSDT</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Collateral</p>
+                                <p className="text-lg font-semibold">{ethers.formatEther(loan.unit0Amount)} UNIT0</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Interest Rate</p>
+                                <p className="text-lg font-semibold">{Number(loan.interestRate) / 100}%</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Start Time</p>
+                                <p className="text-lg font-semibold">
+                                  {new Date(Number(loan.startTime) * 1000).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Duration</p>
+                                <p className="text-lg font-semibold">{loan.duration} minutes</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Status</p>
+                                <p className="text-lg font-semibold text-[#2FFA98]">
+                                  {loan.isActive ? "Active" : loan.isRepaid ? "Repaid" : "Liquidated"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
+                              {loan.isActive && (
+                                <Button
+                                  onClick={() => handleRepayLoan(loan.id)}
+                                  disabled={repayingLoans[loan.id]}
+                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
+                                >
+                                  {repayingLoans[loan.id] ? (
+                                    <div className="flex items-center justify-center">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                      Repaying...
+                                    </div>
+                                  ) : (
+                                    "Repay Loan"
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Available Offers to Borrow */}
+                      <div className="space-y-4">
+                        {activeOffers.map((offer) => (
+                          <div key={offer.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
+                            <div className="flex items-center justify-between pb-4 border-b border-[#2FFA98]/20">
+                              <div className="flex items-center space-x-2">
+                                <Wallet className="w-5 h-5 text-[#2FFA98]" />
+                                <p className="text-sm text-gray-300">
+                                  Lender: {offer.lender?.slice(0, 6)}...{offer.lender?.slice(-4)}
+                                </p>
+                              </div>
+                              <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
+                                <p className="text-sm text-[#2FFA98]">#{offer.id?.toString()}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4 my-4">
+                              <div>
+                                <p className="text-sm text-gray-400">Lending Amount</p>
+                                <p className="text-lg font-semibold">{ethers.formatEther(offer.uusdtAmount)} UUSDT</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Platform Fee</p>
+                                <p className="text-lg font-semibold text-[#2FFA98]">
+                                  {(Number(ethers.formatEther(offer.uusdtAmount)) * 0.01).toFixed(5)} UUSDT
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Interest Rate</p>
+                                <p className="text-lg font-semibold">{Number(offer.interestRate) / 100}%</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Required UNIT0</p>
+                                <p className="text-lg font-semibold">{ethers.formatEther(offer.requiredUNIT0)} UNIT0</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Duration</p>
+                                <p className="text-lg font-semibold">{offer.duration} minutes</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Status</p>
+                                <p className="text-lg font-semibold text-[#2FFA98]">
+                                  {offer.isActive ? "Active" : "Inactive"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
+                              <Button
+                                onClick={() => handleBorrowFromOffer(offer.id)}
+                                disabled={isBorrowing}
+                                className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
+                              >
+                                {isBorrowing ? (
+                                  <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                    Borrowing...
+                                  </div>
+                                ) : (
+                                  "Borrow Now"
+                                )}
+                              </Button>
                             </div>
                           </div>
                         ))}
@@ -781,23 +667,6 @@ const App = () => {
               </CardHeader>
             </Card>
           </div>
-
-          {/* Sağ kısım (1 kolon) */}
-          {/*
-          <div className="col-span-1" data-aos="fade-left">
-            <Card className="h-full border border-[#2FFA98]/20 shadow-xl bg-white/5 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center justify-center h-full">
-        
-                  <div className="flex items-center space-x-2">
-                    <Wallet className="w-6 h-6" />
-                    <span className="text-[#2FFA98] text-lg font-medium">Welcome to the platform</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          */}
         </div>
       </main>
     </div>
