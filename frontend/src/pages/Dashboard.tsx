@@ -52,6 +52,9 @@ createAppKit({
   features: {
     analytics: true,
   },
+  themeVariables: {
+    "--w3m-accent": "#21D992",
+  },
 });
 
 const Dashboard = () => {
