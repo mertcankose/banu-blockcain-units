@@ -76,11 +76,14 @@ const App = () => {
   const [activeOffers, setActiveOffers] = useState([]);
   const [userLoans, setUserLoans] = useState([]);
   const [lendingValues, setLendingValues] = useState({
-    uusdtAmount: "",
-    collateralRate: "",
-    interestRate: "",
-    duration: "",
+    uusdtAmount: "", // Normal rakam girecek (örn: 100)
+    collateralRate: "", // Normal yüzde girecek (örn: 150)
+    interestRate: "", // Normal yüzde girecek (örn: 10)
+    duration: "", // Dakika girecek (örn: 30)
   });
+
+  const [isCreatingOffer, setIsCreatingOffer] = useState(false);
+  const [isBorrowing, setIsBorrowing] = useState(false);
 
   /* animation */
   useEffect(() => {
@@ -185,24 +188,46 @@ const App = () => {
     setUserLoans(loans);
   };
 
-  // Borç verme teklifi oluştur
   const handleCreateOffer = async () => {
+    setIsCreatingOffer(true);
     try {
-      const tx = await p2pBorrowLendingContract.createOffer(
-        ethers.parseUnits(lendingValues.uusdtAmount, 18),
-        lendingValues.collateralRate,
-        lendingValues.interestRate,
-        lendingValues.duration
-      );
+      const uusdtAmount = ethers.parseUnits(lendingValues.uusdtAmount, 18);
+      const currentAllowance = await uusdtTokenContract.allowance(address, P2PBORROWLENDING_ADDRESS);
+
+      if (currentAllowance < BigInt(uusdtAmount.toString())) {
+        const approveAmount = ethers.MaxUint256;
+        try {
+          const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, approveAmount);
+          await approveTx.wait();
+        } catch (error) {
+          console.error("Approval failed:", error);
+          return;
+        }
+      }
+
+      const collateralRate = Number(lendingValues.collateralRate);
+      const interestRate = Number(lendingValues.interestRate) * 100;
+      const duration = Number(lendingValues.duration);
+
+      const tx = await p2pBorrowLendingContract.createOffer(uusdtAmount, collateralRate, interestRate, duration);
       await tx.wait();
       fetchActiveOffers();
+
+      setLendingValues({
+        uusdtAmount: "",
+        collateralRate: "",
+        interestRate: "",
+        duration: "",
+      });
     } catch (error) {
       console.error("Create offer error:", error);
+    } finally {
+      setIsCreatingOffer(false);
     }
   };
 
-  // Borç al
   const handleBorrowFromOffer = async (offerId) => {
+    setIsBorrowing(true);
     try {
       const offer = activeOffers[offerId];
       const requiredUnit0 = await p2pBorrowLendingContract.calculateRequiredUNIT0(
@@ -217,10 +242,11 @@ const App = () => {
       fetchUserLoans();
     } catch (error) {
       console.error("Borrow error:", error);
+    } finally {
+      setIsBorrowing(false);
     }
   };
 
-  // Borç geri öde
   const handleRepayLoan = async (loanId) => {
     try {
       const tx = await p2pBorrowLendingContract.repayLoan(loanId);
@@ -231,7 +257,6 @@ const App = () => {
     }
   };
 
-  // Teminat talep et
   const handleClaimCollateral = async (loanId) => {
     try {
       const tx = await p2pBorrowLendingContract.claimCollateral(loanId);
@@ -311,21 +336,20 @@ const App = () => {
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Amount</label>
+                            <label className="text-sm text-gray-300">Amount (UUSDT)</label>
                             <div className="relative">
                               <Input
                                 type="number"
                                 value={lendingValues.uusdtAmount}
                                 onChange={(e) => setLendingValues({ ...lendingValues, uusdtAmount: e.target.value })}
-                                placeholder="0.0"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12 w-full 
-                    focus:border-[#2FFA98] focus:ring-1 focus:ring-[#2FFA98] 
-                    transition-all duration-200"
+                                placeholder="100"
+                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12"
                               />
                               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
                                 UUSDT
                               </span>
                             </div>
+                            <p className="text-xs text-gray-400">Enter the amount you want to lend</p>
                           </div>
 
                           <div className="space-y-2">
@@ -335,13 +359,12 @@ const App = () => {
                                 type="number"
                                 value={lendingValues.collateralRate}
                                 onChange={(e) => setLendingValues({ ...lendingValues, collateralRate: e.target.value })}
-                                placeholder="100"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-12 h-12 w-full 
-                    focus:border-[#2FFA98] focus:ring-1 focus:ring-[#2FFA98] 
-                    transition-all duration-200"
+                                placeholder="150"
+                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-12 h-12"
                               />
                               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
                             </div>
+                            <p className="text-xs text-gray-400">Example: 150 means 150% collateral required</p>
                           </div>
 
                           <div className="space-y-2">
@@ -351,15 +374,12 @@ const App = () => {
                                 type="number"
                                 value={lendingValues.interestRate}
                                 onChange={(e) => setLendingValues({ ...lendingValues, interestRate: e.target.value })}
-                                placeholder="1000"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12 w-full 
-                    focus:border-[#2FFA98] focus:ring-1 focus:ring-[#2FFA98] 
-                    transition-all duration-200"
+                                placeholder="10"
+                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-12 h-12"
                               />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                = 10%
-                              </span>
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">%</span>
                             </div>
+                            <p className="text-xs text-gray-400">Enter direct percentage (e.g., 10 for 10%)</p>
                           </div>
 
                           <div className="space-y-2">
@@ -369,25 +389,42 @@ const App = () => {
                                 type="number"
                                 value={lendingValues.duration}
                                 onChange={(e) => setLendingValues({ ...lendingValues, duration: e.target.value })}
-                                placeholder="60"
-                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12 w-full 
-                    focus:border-[#2FFA98] focus:ring-1 focus:ring-[#2FFA98] 
-                    transition-all duration-200"
+                                placeholder="30"
+                                className="bg-black/20 border-[#2FFA98]/20 rounded-lg pl-4 pr-16 h-12"
                               />
                               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400">
                                 mins
                               </span>
                             </div>
+                            <p className="text-xs text-gray-400">Enter duration in minutes</p>
                           </div>
+                        </div>
+
+                        <div className="mb-4 p-4 bg-black/20 rounded-lg">
+                          <h4 className="text-sm font-semibold text-[#2FFA98] mb-2">Summary</h4>
+                          <p className="text-sm text-gray-300">
+                            You will lend {lendingValues.uusdtAmount || "0"} UUSDT <br />
+                            Borrower needs to provide {lendingValues.collateralRate || "0"}% collateral in UNIT0 <br />
+                            Interest rate is {lendingValues.interestRate || "0"}% <br />
+                            Loan duration is {lendingValues.duration || "0"} minutes
+                          </p>
                         </div>
 
                         <Button
                           onClick={handleCreateOffer}
+                          disabled={isCreatingOffer}
                           className="w-full bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] h-12 
-              text-black font-semibold rounded-lg hover:opacity-90 
-              transition-all duration-200"
+    text-black font-semibold rounded-lg hover:opacity-90 cursor-pointer
+    disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Create Lending Offer
+                          {isCreatingOffer ? (
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
+                              Creating...
+                            </div>
+                          ) : (
+                            "Create Lending Offer"
+                          )}
                         </Button>
                       </div>
 
@@ -420,7 +457,7 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Interest Rate</p>
                                     <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {offer.interestRate / 100}% APR
+                                      {Number(offer.interestRate) / 100}% APR
                                     </p>
                                   </div>
 
@@ -450,9 +487,18 @@ const App = () => {
                               <div className="flex flex-col justify-center">
                                 <Button
                                   onClick={() => handleBorrowFromOffer(offer.id)}
-                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6"
+                                  disabled={isBorrowing}
+                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 h-10
+    disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  Borrow Now
+                                  {isBorrowing ? (
+                                    <div className="flex items-center justify-center">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                      Borrowing...
+                                    </div>
+                                  ) : (
+                                    "Borrow Now"
+                                  )}
                                 </Button>
                                 <p className="text-xs text-gray-400 mt-2 text-center">Ends in: {offer.duration} min</p>
                               </div>
@@ -571,7 +617,7 @@ const App = () => {
                                     </p>
                                   </div>
                                   <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
-                                    <p className="text-sm text-[#2FFA98]">Offer #{offer.id?.toString()}</p>
+                                    <p className="text-sm text-[#2FFA98]">Offer #{index + 1}</p>
                                   </div>
                                 </div>
 
@@ -592,7 +638,7 @@ const App = () => {
                                   <div>
                                     <p className="text-sm text-gray-400">Interest Rate</p>
                                     <p className="text-lg font-semibold text-[#2FFA98]">
-                                      {offer.interestRate / 100}% APR
+                                      {Number(offer.interestRate) / 100}% APR
                                     </p>
                                   </div>
 

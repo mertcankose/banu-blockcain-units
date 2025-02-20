@@ -8,3 +8,14 @@
     --radius: 0.5rem;
   }
 }
+
+/* globals.css veya ilgili stil dosyasına */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
