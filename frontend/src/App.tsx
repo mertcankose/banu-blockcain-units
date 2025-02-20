@@ -1,10 +1,8 @@
 // @ts-nocheck
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
 import { createAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
-import { mainnet, sepolia } from "@reown/appkit/networks";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
@@ -20,7 +18,7 @@ const metadata = {
   icons: ["https://banuchain.com/banuchain.png"],
 };
 
-const customChain = {
+const unit0testnet = {
   id: 88817, // Replace with your network ID
   name: "UNIT ZERO",
   nativeCurrency: {
@@ -30,20 +28,20 @@ const customChain = {
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc-testnet.unit0.dev"], // Replace with your RPC URL
+      http: ["https://rpc-testnet.unit0.dev"],
     },
   },
   blockExplorers: {
     default: {
       name: "Explorer",
-      url: "https://explorer-testnet.unit0.dev", // Replace with your block explorer URL
+      url: "https://explorer-testnet.unit0.dev",
     },
   },
 };
 
 createAppKit({
   adapters: [new EthersAdapter()],
-  networks: [sepolia, mainnet, customChain],
+  networks: [unit0testnet],
   metadata,
   projectId,
   features: {
