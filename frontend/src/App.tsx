@@ -1,14 +1,21 @@
 // @ts-nocheck
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
+import { mainnet, sepolia } from "@reown/appkit/networks";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { BrowserProvider } from "ethers";
 import AOS from "aos";
 import "aos/dist/aos.css";
+
+// Lucide-react ikonlarını import ediyoruz
+import { Edit, Send, Star, Wallet } from "lucide-react";
+
+// Resmi import ediyoruz
+import backgroundImage from "@/assets/background.jpg";
 
 const projectId = "415b280d7f14fd394fac17ffed28e6db";
 const metadata = {
@@ -56,6 +63,7 @@ const App = () => {
       once: true,
     });
   }, []);
+
   // WALLET
   const { walletProvider } = useAppKitProvider("eip155");
   const { address, isConnected } = useAppKitAccount();
@@ -94,7 +102,6 @@ const App = () => {
     try {
       if (!isConnected || !provider) return;
       const unitsBal = await provider.getBalance(address);
-
       setUnitsBalance(ethers.formatEther(unitsBal));
     } catch (err) {
       console.error("Balance fetch error:", err);
@@ -103,35 +110,58 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#9FE0C1] to-[#8ac5a8]">
+    <div
+      className="min-h-screen relative text-white"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {/* İsteğe bağlı grid deseni overlay */}
+      <div className="absolute inset-0 bg-[url('/path/to/your-grid-image.png')] bg-repeat opacity-5 pointer-events-none"></div>
+
       {/* Header */}
-      <header className="bg-gradient-to-r from-[#555A3B] to-[#666c4c] shadow-lg" data-aos="fade-down">
+      <header className="bg-transparent" data-aos="fade-down">
         <div className="container mx-auto px-6 py-6 flex justify-between items-center">
-          <div className="text-2xl font-bold text-white tracking-wider bg-gradient-to-r from-white/90 to-white bg-clip-text text-transparent">
-            LOGO
-          </div>
+          <div className="text-2xl font-bold tracking-wider text-[#2FFA98]">LOGO</div>
           <appkit-button balance="show" label="Connect Wallet" size="md" loadingLabel="Connecting.." />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12">
+      <main className="container mx-auto px-6 py-12 relative">
         <div className="grid grid-cols-4 gap-8">
-          {/* Main Section - Takes up 3 columns */}
+          {/* Ana kısım (3 kolon) */}
           <div className="col-span-3" data-aos="fade-right">
-            <Card className="border border-[#555A3B]/20 shadow-xl bg-white/95">
-              <CardHeader className="bg-gradient-to-r from-white to-white/95 rounded-t-lg border-b border-[#555A3B]/20">
+            <Card className="border border-[#2FFA98]/20 shadow-xl bg-white/5 backdrop-blur-sm text-white">
+              <CardHeader className="bg-white/5 rounded-t-lg border-b border-[#2FFA98]/20">
+                {/* Kart başlığına ikon ekledik */}
+                <div className="flex items-center space-x-2 p-2">
+                  <Star className="w-6 h-6 text-[#2FFA98]" />
+                  <h2 className="text-xl font-bold">Transactions</h2>
+                </div>
                 <Tabs defaultValue="borrow" className="w-full">
                   <TabsList className="grid w-full max-w-[400px] grid-cols-2">
                     <TabsTrigger
                       value="borrow"
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#9FE0C1] data-[state=active]:to-[#8ac5a8] data-[state=active]:text-[#555A3B]"
+                      className="
+                        data-[state=active]:bg-gradient-to-r
+                        data-[state=active]:from-[#2FFA98]
+                        data-[state=active]:to-[#22DD7B]
+                        data-[state=active]:text-black
+                      "
                     >
                       Borrow
                     </TabsTrigger>
                     <TabsTrigger
                       value="lending"
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#9FE0C1] data-[state=active]:to-[#8ac5a8] data-[state=active]:text-[#555A3B]"
+                      className="
+                        data-[state=active]:bg-gradient-to-r
+                        data-[state=active]:from-[#2FFA98]
+                        data-[state=active]:to-[#22DD7B]
+                        data-[state=active]:text-black
+                      "
                     >
                       Lending
                     </TabsTrigger>
@@ -141,32 +171,44 @@ const App = () => {
                     <div className="space-y-6">
                       {/* Transaction Input */}
                       <div
-                        className="bg-gradient-to-r from-[#9FE0C1]/30 to-[#8ac5a8]/30 p-6 rounded-lg shadow-md"
+                        className="bg-white/5 p-6 rounded-lg shadow-md border border-[#2FFA98]/20"
                         data-aos="fade-up"
                       >
                         <Input
-                          className="w-full bg-white/90 border border-[#555A3B]/20 text-[#555A3B] font-medium"
+                          className="w-full bg-transparent border border-[#2FFA98]/20 text-[#2FFA98] font-medium"
                           value="0x12(you) -> 0x13 borrow 12 eth"
                           readOnly
                         />
                       </div>
 
                       {/* Transactions List */}
-                      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#555A3B]/20 scrollbar-track-transparent">
+                      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#2FFA98]/20 scrollbar-track-transparent">
                         {dummyTransactions.map((tx, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between bg-white p-6 rounded-lg shadow-md border border-[#555A3B]/10 hover:bg-gradient-to-r hover:from-white hover:to-[#9FE0C1]/10 transition-all duration-300"
+                            className="
+                              flex items-center justify-between
+                              bg-white/5 p-6 rounded-lg shadow-md
+                              border border-[#2FFA98]/10
+                              hover:bg-[#2FFA98]/10
+                              transition-all duration-300
+                            "
                             data-aos="fade-up"
                             data-aos-delay={index * 50}
                           >
-                            <span className="text-[#555A3B] font-medium">{tx.address}</span>
-                            <span className="text-[#555A3B] font-medium">{tx.amount} ETH</span>
-                            <span className="text-[#555A3B] font-medium">{tx.rate}%</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.address}</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.amount} ETH</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.rate}%</span>
                             <Button
-                              className="bg-gradient-to-r from-[#555A3B] to-[#666c4c] text-white hover:from-[#9FE0C1] hover:to-[#8ac5a8] hover:text-[#555A3B] transition-all duration-300"
+                              className="
+                                bg-gradient-to-r from-[#2FFA98] to-[#22DD7B]
+                                text-black hover:opacity-90
+                                transition-all duration-300
+                              "
                               size="sm"
                             >
+                              {/* Borrow tabındaki butona Edit ikonunu ekledik */}
+                              <Edit className="w-4 h-4 mr-2" />
                               Action
                             </Button>
                           </div>
@@ -177,30 +219,42 @@ const App = () => {
 
                   <TabsContent value="lending" className="mt-6">
                     <div className="space-y-6">
-                      {/* Similar structure as borrow, but with lending-specific content */}
-                      <div className="bg-gradient-to-r from-[#9FE0C1]/30 to-[#8ac5a8]/30 p-6 rounded-lg shadow-md">
+                      {/* Lending'e özel alan */}
+                      <div className="bg-white/5 p-6 rounded-lg shadow-md border border-[#2FFA98]/20">
                         <Input
-                          className="w-full bg-white/90 border border-[#555A3B]/20 text-[#555A3B] font-medium"
+                          className="w-full bg-transparent border border-[#2FFA98]/20 text-[#2FFA98] font-medium"
                           value="0x12(you) -> 0x13 lend 12 eth"
                           readOnly
                         />
                       </div>
 
-                      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#555A3B]/20 scrollbar-track-transparent">
+                      <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#2FFA98]/20 scrollbar-track-transparent">
                         {dummyTransactions.map((tx, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between bg-white p-6 rounded-lg shadow-md border border-[#555A3B]/10 hover:bg-gradient-to-r hover:from-white hover:to-[#9FE0C1]/10 transition-all duration-300"
+                            className="
+                              flex items-center justify-between
+                              bg-white/5 p-6 rounded-lg shadow-md
+                              border border-[#2FFA98]/10
+                              hover:bg-[#2FFA98]/10
+                              transition-all duration-300
+                            "
                             data-aos="fade-up"
                             data-aos-delay={index * 50}
                           >
-                            <span className="text-[#555A3B] font-medium">{tx.address}</span>
-                            <span className="text-[#555A3B] font-medium">{tx.amount} ETH</span>
-                            <span className="text-[#555A3B] font-medium">{tx.rate}%</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.address}</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.amount} ETH</span>
+                            <span className="text-[#2FFA98] font-medium">{tx.rate}%</span>
                             <Button
-                              className="bg-gradient-to-r from-[#555A3B] to-[#666c4c] text-white hover:from-[#9FE0C1] hover:to-[#8ac5a8] hover:text-[#555A3B] transition-all duration-300"
+                              className="
+                                bg-gradient-to-r from-[#2FFA98] to-[#22DD7B]
+                                text-black hover:opacity-90
+                                transition-all duration-300
+                              "
                               size="sm"
                             >
+                              {/* Lending tabındaki butona Send ikonunu ekledik */}
+                              <Send className="w-4 h-4 mr-2" />
                               Lend
                             </Button>
                           </div>
@@ -213,13 +267,15 @@ const App = () => {
             </Card>
           </div>
 
-          {/* Right Section - Takes up 1 column */}
+          {/* Sağ kısım (1 kolon) */}
           <div className="col-span-1" data-aos="fade-left">
-            <Card className="h-full border border-[#555A3B]/20 shadow-xl bg-white/95">
+            <Card className="h-full border border-[#2FFA98]/20 shadow-xl bg-white/5 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center h-full">
-                  <div className="text-[#555A3B] text-lg font-medium bg-gradient-to-r from-[#555A3B] to-[#666c4c] bg-clip-text text-transparent">
-                    Welcome to the platform
+                  {/* Welcome kartına Wallet ikonunu ekledik */}
+                  <div className="flex items-center space-x-2">
+                    <Wallet className="w-6 h-6" />
+                    <span className="text-[#2FFA98] text-lg font-medium">Welcome to the platform</span>
                   </div>
                 </div>
               </CardContent>
