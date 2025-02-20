@@ -20,9 +20,30 @@ const metadata = {
   icons: ["https://banuchain.com/banuchain.png"],
 };
 
+const customChain = {
+  id: 88817, // Replace with your network ID
+  name: "UNIT ZERO",
+  nativeCurrency: {
+    name: "UNIT ZERO",
+    symbol: "UNIT0",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://rpc-testnet.unit0.dev"], // Replace with your RPC URL
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Explorer",
+      url: "https://explorer-testnet.unit0.dev", // Replace with your block explorer URL
+    },
+  },
+};
+
 createAppKit({
   adapters: [new EthersAdapter()],
-  networks: [sepolia, mainnet],
+  networks: [sepolia, mainnet, customChain],
   metadata,
   projectId,
   features: {
