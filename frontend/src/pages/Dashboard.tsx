@@ -86,6 +86,9 @@ const Dashboard = () => {
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [borrowingStates, setBorrowingStates] = useState({});
   const [cancellingStates, setCancellingStates] = useState({});
+  const [claimingStates, setClaimingStates] = useState({});
+
+  const [allOffers, setAllOffers] = useState([]);
 
   useEffect(() => {
     AOS.init({
@@ -117,6 +120,7 @@ const Dashboard = () => {
     if (p2pBorrowLendingContract && address) {
       fetchActiveOffers();
       fetchUserLoans();
+      fetchAllOffers();
     }
   }, [p2pBorrowLendingContract, address]);
 
@@ -169,11 +173,40 @@ const Dashboard = () => {
   const fetchUserLoans = async () => {
     if (!p2pBorrowLendingContract || !address) return;
     try {
-      const loans = await p2pBorrowLendingContract.getUserLoans(address);
-      setUserLoans(loans);
+      // Get all loans
+      const allLoans = [];
+      const loanCount = await p2pBorrowLendingContract.loanCount();
+
+      for (let i = 1; i <= loanCount; i++) {
+        const loan = await p2pBorrowLendingContract.loans(i);
+        // Include loans where user is either the borrower or the lender
+        if (
+          loan.borrower.toLowerCase() === address.toLowerCase() ||
+          loan.lender.toLowerCase() === address.toLowerCase()
+        ) {
+          allLoans.push(loan);
+        }
+      }
+
+      setUserLoans(allLoans);
     } catch (error) {
       console.error("Error fetching user loans:", error);
       setUserLoans([]);
+    }
+  };
+
+  const fetchAllOffers = async () => {
+    if (!p2pBorrowLendingContract) return;
+    try {
+      const offers = [];
+      for (let i = 1; i <= (await p2pBorrowLendingContract.offerCount()); i++) {
+        const offer = await p2pBorrowLendingContract.lendingOffers(i);
+        offers.push(offer);
+      }
+      setAllOffers(offers);
+    } catch (error) {
+      console.error("Error fetching all offers:", error);
+      setAllOffers([]);
     }
   };
 
@@ -232,7 +265,7 @@ const Dashboard = () => {
   const handleBorrowFromOffer = async (offerId) => {
     setBorrowingStates((prev) => ({ ...prev, [offerId]: true }));
     try {
-      const offer = activeOffers.find((offer) => offer.id.toString() === offerId.toString());
+      const offer = allOffers.find((offer) => offer.id.toString() === offerId.toString());
       if (!offer) {
         errorMessage("Offer not found");
         return;
@@ -242,7 +275,7 @@ const Dashboard = () => {
         value: offer.requiredUNIT0,
       });
       await tx.wait();
-      await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
+      await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers(), fetchAllOffers()]);
       successMessage("Successfully borrowed from offer");
     } catch (error) {
       console.error("Borrow error:", error);
@@ -283,12 +316,91 @@ const Dashboard = () => {
     }
   };
 
+  const handleClaimCollateral = async (loanId) => {
+    setClaimingStates((prev) => ({ ...prev, [loanId]: true }));
+    try {
+      const loan = userLoans.find((loan) => loan.id.toString() === loanId.toString());
+      if (!loan) {
+        errorMessage("Loan not found");
+        return;
+      }
+
+      // Check conditions before sending transaction
+      if (!loan.isActive) {
+        errorMessage("Loan is not active");
+        return;
+      }
+      if (loan.lender.toLowerCase() !== address?.toLowerCase()) {
+        errorMessage("You are not the lender of this loan");
+        return;
+      }
+      if (Number(loan.startTime) + Number(loan.duration) * 60 >= Math.floor(Date.now() / 1000)) {
+        errorMessage("Loan period has not expired yet");
+        return;
+      }
+
+      // Check contract balance
+      const contractBalance = await provider.getBalance(P2PBORROWLENDING_ADDRESS);
+      if (contractBalance < loan.unit0Amount) {
+        errorMessage("Contract does not have enough UNIT0 balance");
+        return;
+      }
+
+      console.log("Claiming collateral...");
+      console.log("Loan ID:", loan.id.toString());
+      console.log("Collateral Amount:", ethers.formatEther(loan.unit0Amount), "UNIT0");
+      console.log("Contract Balance:", ethers.formatEther(contractBalance), "UNIT0");
+
+      const tx = await p2pBorrowLendingContract.claimCollateral(loan.id);
+      console.log("Transaction sent:", tx.hash);
+
+      const receipt = await tx.wait();
+      console.log("Transaction confirmed:", receipt);
+
+      // Check if the CollateralClaimed event was emitted
+      const claimEvent = receipt.logs.find(
+        (log) => log.topics[0] === p2pBorrowLendingContract.interface.getEventTopic("CollateralClaimed")
+      );
+
+      if (!claimEvent) {
+        console.warn("CollateralClaimed event not found in transaction logs");
+      }
+
+      // Verify balance change
+      const balanceBefore = await provider.getBalance(address);
+      await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers(), fetchAllOffers()]);
+      const balanceAfter = await provider.getBalance(address);
+
+      console.log("Balance before:", ethers.formatEther(balanceBefore), "UNIT0");
+      console.log("Balance after:", ethers.formatEther(balanceAfter), "UNIT0");
+      console.log("Balance change:", ethers.formatEther(balanceAfter - balanceBefore), "UNIT0");
+
+      if (balanceAfter <= balanceBefore) {
+        console.warn("Balance did not increase after claiming collateral");
+      }
+
+      successMessage("Successfully claimed collateral");
+    } catch (error) {
+      console.error("Claim collateral error:", error);
+      // Extract error message from ethers error object
+      const errorMsg = error.message || "Failed to claim collateral";
+      if (errorMsg.includes("execution reverted")) {
+        const reason = errorMsg.split("execution reverted:")[1]?.trim() || "Unknown error";
+        errorMessage(`Transaction failed: ${reason}`);
+      } else {
+        errorMessage(errorMsg);
+      }
+    } finally {
+      setClaimingStates((prev) => ({ ...prev, [loanId]: false }));
+    }
+  };
+
   return (
     <div
       className="min-h-screen relative text-white"
       style={{
         backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: "cover",
+        backgroundSize: "contain",
         backgroundPosition: "center",
       }}
     >
@@ -597,23 +709,73 @@ const Dashboard = () => {
                               </div>
                             </div>
 
-                            <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
-                              {loan.isActive && (
-                                <Button
-                                  onClick={() => handleRepayLoan(loan.id)}
-                                  disabled={repayingLoans[loan.id]}
-                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
-                                >
-                                  {repayingLoans[loan.id] ? (
-                                    <div className="flex items-center justify-center">
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                                      Repaying...
-                                    </div>
+                            <div className="flex justify-between items-center space-x-4 pt-4 border-t border-[#2FFA98]/20">
+                              <div className="text-sm">
+                                {loan.isActive ? (
+                                  Number(loan.startTime) + Number(loan.duration) * 60 >
+                                  Math.floor(Date.now() / 1000) ? (
+                                    <span className="text-[#2FFA98]">
+                                      Time remaining:{" "}
+                                      {Math.ceil(
+                                        (Number(loan.startTime) +
+                                          Number(loan.duration) * 60 -
+                                          Math.floor(Date.now() / 1000)) /
+                                          60
+                                      )}{" "}
+                                      minutes
+                                    </span>
                                   ) : (
-                                    "Repay Loan"
-                                  )}
-                                </Button>
-                              )}
+                                    <span className="text-red-400">Loan period has expired</span>
+                                  )
+                                ) : loan.isRepaid ? (
+                                  <span className="text-blue-400">Loan has been repaid</span>
+                                ) : (
+                                  <span className="text-red-400">Loan has been liquidated</span>
+                                )}
+                              </div>
+
+                              <div className="flex justify-end space-x-4">
+                                {loan.isActive && (
+                                  <>
+                                    {loan.lender.toLowerCase() === address?.toLowerCase() ? (
+                                      Number(loan.startTime) + Number(loan.duration) * 60 <
+                                      Math.floor(Date.now() / 1000) ? (
+                                        <Button
+                                          onClick={() => handleClaimCollateral(loan.id)}
+                                          disabled={claimingStates[loan.id]}
+                                          className="bg-red-500 hover:bg-red-600 px-6 cursor-pointer"
+                                        >
+                                          {claimingStates[loan.id] ? (
+                                            <div className="flex items-center justify-center">
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                              Claiming...
+                                            </div>
+                                          ) : (
+                                            "Claim Collateral"
+                                          )}
+                                        </Button>
+                                      ) : (
+                                        <div className="text-sm text-gray-400">Waiting for repayment</div>
+                                      )
+                                    ) : (
+                                      <Button
+                                        onClick={() => handleRepayLoan(loan.id)}
+                                        disabled={repayingLoans[loan.id]}
+                                        className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
+                                      >
+                                        {repayingLoans[loan.id] ? (
+                                          <div className="flex items-center justify-center">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                            Repaying...
+                                          </div>
+                                        ) : (
+                                          "Repay Loan"
+                                        )}
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -621,7 +783,7 @@ const Dashboard = () => {
 
                       {/* Available Offers to Borrow */}
                       <div className="space-y-4">
-                        {activeOffers.map((offer) => (
+                        {allOffers.map((offer) => (
                           <div key={offer.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
                             <div className="flex items-center justify-between pb-4 border-b border-[#2FFA98]/20">
                               <div className="flex items-center space-x-2">
@@ -630,8 +792,17 @@ const Dashboard = () => {
                                   Lender: {offer.lender?.slice(0, 6)}...{offer.lender?.slice(-4)}
                                 </p>
                               </div>
-                              <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
-                                <p className="text-sm text-[#2FFA98]">#{offer.id?.toString()}</p>
+                              <div className="flex items-center space-x-3">
+                                <div
+                                  className={`px-3 py-1 rounded-full ${
+                                    offer.isActive ? "bg-[#2FFA98]/10 text-[#2FFA98]" : "bg-gray-500/10 text-gray-400"
+                                  }`}
+                                >
+                                  <p className="text-sm">{offer.isActive ? "Active" : "Borrowed"}</p>
+                                </div>
+                                <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
+                                  <p className="text-sm text-[#2FFA98]">#{offer.id?.toString()}</p>
+                                </div>
                               </div>
                             </div>
 
@@ -658,29 +829,25 @@ const Dashboard = () => {
                                 <p className="text-sm text-gray-400">Duration</p>
                                 <p className="text-lg font-semibold">{offer.duration} minutes</p>
                               </div>
-                              <div>
-                                <p className="text-sm text-gray-400">Status</p>
-                                <p className="text-lg font-semibold text-[#2FFA98]">
-                                  {offer.isActive ? "Active" : "Inactive"}
-                                </p>
-                              </div>
                             </div>
 
                             <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
-                              <Button
-                                onClick={() => handleBorrowFromOffer(offer.id)}
-                                disabled={borrowingStates[offer.id]}
-                                className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
-                              >
-                                {borrowingStates[offer.id] ? (
-                                  <div className="flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                                    Borrowing...
-                                  </div>
-                                ) : (
-                                  "Borrow Now"
-                                )}
-                              </Button>
+                              {offer.isActive && offer.lender.toLowerCase() !== address?.toLowerCase() && (
+                                <Button
+                                  onClick={() => handleBorrowFromOffer(offer.id)}
+                                  disabled={borrowingStates[offer.id]}
+                                  className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
+                                >
+                                  {borrowingStates[offer.id] ? (
+                                    <div className="flex items-center justify-center">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                      Borrowing...
+                                    </div>
+                                  ) : (
+                                    "Borrow Now"
+                                  )}
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ))}
