@@ -325,64 +325,12 @@ const Dashboard = () => {
         return;
       }
 
-      // Check conditions before sending transaction
-      if (!loan.isActive) {
-        errorMessage("Loan is not active");
-        return;
-      }
-      if (loan.lender.toLowerCase() !== address?.toLowerCase()) {
-        errorMessage("You are not the lender of this loan");
-        return;
-      }
-      if (Number(loan.startTime) + Number(loan.duration) * 60 >= Math.floor(Date.now() / 1000)) {
-        errorMessage("Loan period has not expired yet");
-        return;
-      }
-
-      // Check contract balance
-      const contractBalance = await provider.getBalance(P2PBORROWLENDING_ADDRESS);
-      if (contractBalance < loan.unit0Amount) {
-        errorMessage("Contract does not have enough UNIT0 balance");
-        return;
-      }
-
-      console.log("Claiming collateral...");
-      console.log("Loan ID:", loan.id.toString());
-      console.log("Collateral Amount:", ethers.formatEther(loan.unit0Amount), "UNIT0");
-      console.log("Contract Balance:", ethers.formatEther(contractBalance), "UNIT0");
-
       const tx = await p2pBorrowLendingContract.claimCollateral(loan.id);
-      console.log("Transaction sent:", tx.hash);
-
-      const receipt = await tx.wait();
-      console.log("Transaction confirmed:", receipt);
-
-      // Check if the CollateralClaimed event was emitted
-      const claimEvent = receipt.logs.find(
-        (log) => log.topics[0] === p2pBorrowLendingContract.interface.getEventTopic("CollateralClaimed")
-      );
-
-      if (!claimEvent) {
-        console.warn("CollateralClaimed event not found in transaction logs");
-      }
-
-      // Verify balance change
-      const balanceBefore = await provider.getBalance(address);
+      await tx.wait();
       await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers(), fetchAllOffers()]);
-      const balanceAfter = await provider.getBalance(address);
-
-      console.log("Balance before:", ethers.formatEther(balanceBefore), "UNIT0");
-      console.log("Balance after:", ethers.formatEther(balanceAfter), "UNIT0");
-      console.log("Balance change:", ethers.formatEther(balanceAfter - balanceBefore), "UNIT0");
-
-      if (balanceAfter <= balanceBefore) {
-        console.warn("Balance did not increase after claiming collateral");
-      }
-
       successMessage("Successfully claimed collateral");
     } catch (error) {
       console.error("Claim collateral error:", error);
-      // Extract error message from ethers error object
       const errorMsg = error.message || "Failed to claim collateral";
       if (errorMsg.includes("execution reverted")) {
         const reason = errorMsg.split("execution reverted:")[1]?.trim() || "Unknown error";
