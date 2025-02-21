@@ -1,3 +1,5 @@
+- [Presentation](https://github.com/mertcankose/banu-blockcain-units/banuchain.pptx)
+
 ## Credix - Banuchain
 
 **Credix is a lending platform for borrowing and lending tokens on the Banuchain network.**
@@ -23,5 +25,3 @@ npm run dev
 
 ![Screenshot](https://github.com/mertcankose/banu-blockcain-units/blob/main/frontend/src/assets/ss1.png)
 ![Screenshot](https://github.com/mertcankose/banu-blockcain-units/blob/main/frontend/src/assets/ss2.png)
-
-- [Presentation](https://github.com/mertcankose/banu-blockcain-units/banuchain.pptx)
