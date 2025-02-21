@@ -1,4 +1,4 @@
-- [Presentation](https://github.com/mertcankose/banu-blockcain-units/banuchain.pptx)
+- [Presentation](https://drive.google.com/drive/folders/1IxiClepUuvtm0ADQ8jVd3-L0nu6kwlXj?usp=sharing)
 
 ## Credix - Banuchain
 
