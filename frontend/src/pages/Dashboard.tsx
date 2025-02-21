@@ -636,14 +636,21 @@ const Dashboard = () => {
                               <div className="flex items-center space-x-2">
                                 <Wallet className="w-5 h-5 text-[#2FFA98]" />
                                 <p className="text-sm text-gray-300">
-                                  Lender: {loan.lender?.slice(0, 6)}...{loan.lender?.slice(-4)}
+                                  {loan.borrower.toLowerCase() === address?.toLowerCase() ? (
+                                    <>
+                                      Borrowed from: {loan.lender?.slice(0, 6)}...{loan.lender?.slice(-4)}
+                                    </>
+                                  ) : (
+                                    <>
+                                      Lent to: {loan.borrower?.slice(0, 6)}...{loan.borrower?.slice(-4)}
+                                    </>
+                                  )}
                                 </p>
                               </div>
                               <div className="bg-[#2FFA98]/10 px-3 py-1 rounded-full">
                                 <p className="text-sm text-[#2FFA98]">Loan #{loan.id?.toString()}</p>
                               </div>
                             </div>
-
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 my-4">
                               <div>
                                 <p className="text-sm text-gray-400">Borrowed Amount</p>
@@ -674,13 +681,14 @@ const Dashboard = () => {
                                 </p>
                               </div>
                             </div>
-
+                            asdasdasdasdasd
                             <div className="flex justify-between items-center space-x-4 pt-4 border-t border-[#2FFA98]/20">
                               <div className="text-sm">
                                 {loan.isActive ? (
                                   Number(loan.startTime) + Number(loan.duration) * 60 >
                                   Math.floor(Date.now() / 1000) ? (
-                                    <span className="text-[#2FFA98]">
+                                    <span className="text-[#2FFA98] flex items-center gap-2">
+                                      <Star className="w-4 h-4" />
                                       Time remaining:{" "}
                                       {Math.ceil(
                                         (Number(loan.startTime) +
@@ -691,39 +699,28 @@ const Dashboard = () => {
                                       minutes
                                     </span>
                                   ) : (
-                                    <span className="text-red-400">Loan period has expired</span>
+                                    <span className="text-red-400 flex items-center gap-2">
+                                      <Edit className="w-4 h-4" />
+                                      Loan period has expired
+                                    </span>
                                   )
                                 ) : loan.isRepaid ? (
-                                  <span className="text-blue-400">Loan has been repaid</span>
+                                  <span className="text-blue-400 flex items-center gap-2">
+                                    <Send className="w-4 h-4" />
+                                    Loan has been repaid
+                                  </span>
                                 ) : (
-                                  <span className="text-red-400">Loan has been liquidated</span>
+                                  <span className="text-red-400 flex items-center gap-2">
+                                    <Edit className="w-4 h-4" />
+                                    Loan has been liquidated
+                                  </span>
                                 )}
                               </div>
 
                               <div className="flex justify-end space-x-4">
                                 {loan.isActive && (
                                   <>
-                                    {loan.lender.toLowerCase() === address?.toLowerCase() ? (
-                                      Number(loan.startTime) + Number(loan.duration) * 60 <
-                                      Math.floor(Date.now() / 1000) ? (
-                                        <Button
-                                          onClick={() => handleClaimCollateral(loan.id)}
-                                          disabled={claimingStates[loan.id]}
-                                          className="bg-red-500 hover:bg-red-600 px-6 cursor-pointer"
-                                        >
-                                          {claimingStates[loan.id] ? (
-                                            <div className="flex items-center justify-center">
-                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
-                                              Claiming...
-                                            </div>
-                                          ) : (
-                                            "Claim Collateral"
-                                          )}
-                                        </Button>
-                                      ) : (
-                                        <div className="text-sm text-gray-400">Waiting for repayment</div>
-                                      )
-                                    ) : (
+                                    {loan.borrower.toLowerCase() === address?.toLowerCase() && (
                                       <Button
                                         onClick={() => handleRepayLoan(loan.id)}
                                         disabled={repayingLoans[loan.id]}
@@ -739,6 +736,24 @@ const Dashboard = () => {
                                         )}
                                       </Button>
                                     )}
+                                    {loan.lender.toLowerCase() === address?.toLowerCase() &&
+                                      Number(loan.startTime) + Number(loan.duration) * 60 <
+                                        Math.floor(Date.now() / 1000) && (
+                                        <Button
+                                          onClick={() => handleClaimCollateral(loan.id)}
+                                          disabled={claimingStates[loan.id]}
+                                          className="bg-red-500 hover:bg-red-600 px-6 cursor-pointer"
+                                        >
+                                          {claimingStates[loan.id] ? (
+                                            <div className="flex items-center justify-center">
+                                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                                              Claiming...
+                                            </div>
+                                          ) : (
+                                            "Claim Collateral"
+                                          )}
+                                        </Button>
+                                      )}
                                   </>
                                 )}
                               </div>
