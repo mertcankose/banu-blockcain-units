@@ -60,7 +60,7 @@ createAppKit({
 
 const Dashboard = () => {
   const UUSDT_TOKEN_ADDRESS = "0xC46643d498067CA186505E2eCD3c4A41A4b76dA0";
-  const P2PBORROWLENDING_ADDRESS = "0xd20F9909e920e2ce83c0392B063A6B947d6d49AD";
+  const P2PBORROWLENDING_ADDRESS = "0x6B4C736c2F08dA6E00A1ecC9dD7a99C759114D99";
 
   const { walletProvider } = useAppKitProvider("eip155");
   const { address, isConnected } = useAppKitAccount();
@@ -330,7 +330,7 @@ const Dashboard = () => {
                       <div className="bg-white/5 p-6 rounded-lg shadow-md border border-[#2FFA98]/20">
                         <div className="mb-6">
                           <h3 className="text-xl font-semibold text-[#2FFA98] mb-2">Create Lending Offer</h3>
-                          <p className="text-sm text-gray-400">Fill in the details to create your lending offer</p>
+                          <p className="text-sm text-gray-600">Fill in the details to create your lending offer</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -343,7 +343,7 @@ const Dashboard = () => {
                               placeholder="100"
                               className="bg-black/20 border-[#2FFA98]/20"
                             />
-                            <p className="text-xs text-gray-400 ml-1.5">Enter the amount of UUSDT you want to lend</p>
+                            <p className="text-xs text-gray-200 ml-1.5">Enter the amount of UUSDT you want to lend</p>
                           </div>
 
                           <div className="space-y-1.5">
@@ -355,7 +355,7 @@ const Dashboard = () => {
                               placeholder="150"
                               className="bg-black/20 border-[#2FFA98]/20"
                             />
-                            <p className="text-xs text-gray-400 ml-1.5">
+                            <p className="text-xs text-gray-200 ml-1.5">
                               Example: 150 means borrower needs to deposit 150% collateral
                             </p>
                           </div>
@@ -369,7 +369,7 @@ const Dashboard = () => {
                               placeholder="10"
                               className="bg-black/20 border-[#2FFA98]/20"
                             />
-                            <p className="text-xs text-gray-400 ml-1.5">
+                            <p className="text-xs text-gray-200 ml-1.5">
                               Annual interest rate (e.g., 10 means 10% APR)
                             </p>
                           </div>
@@ -383,7 +383,7 @@ const Dashboard = () => {
                               placeholder="30"
                               className="bg-black/20 border-[#2FFA98]/20"
                             />
-                            <p className="text-xs text-gray-400 ml-1.5">
+                            <p className="text-xs text-gray-200 ml-1.5">
                               Loan duration in minutes (max: 525600 = 1 year)
                             </p>
                           </div>
