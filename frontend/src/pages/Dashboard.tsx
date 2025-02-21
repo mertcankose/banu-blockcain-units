@@ -60,19 +60,25 @@ createAppKit({
 });
 
 const Dashboard = () => {
+  /* Contract Addresses */
   const UUSDT_TOKEN_ADDRESS = "0xC46643d498067CA186505E2eCD3c4A41A4b76dA0";
   const P2PBORROWLENDING_ADDRESS = "0x6B4C736c2F08dA6E00A1ecC9dD7a99C759114D99";
 
+  /* AppKit */
   const { walletProvider } = useAppKitProvider("eip155");
   const { address, isConnected } = useAppKitAccount();
 
+  /* Balances */
   const [unitsBalance, setUnitsBalance] = useState("0");
   const [uusdtBalance, setUusdtBalance] = useState("0");
+
   const [provider, setProvider] = useState(null);
 
+  /* Contracts */
   const [uusdtTokenContract, setUusdtTokenContract] = useState(null);
   const [p2pBorrowLendingContract, setP2pBorrowLendingContract] = useState(null);
 
+  /* Offers, Loans */
   const [activeOffers, setActiveOffers] = useState([]);
   const [userLoans, setUserLoans] = useState([]);
   const [repayingLoans, setRepayingLoans] = useState({});
@@ -83,11 +89,13 @@ const Dashboard = () => {
     duration: "",
   });
 
+  /* States */
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [borrowingStates, setBorrowingStates] = useState({});
   const [cancellingStates, setCancellingStates] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
 
+  /* All Offers */
   const [allOffers, setAllOffers] = useState([]);
 
   useEffect(() => {
@@ -124,6 +132,7 @@ const Dashboard = () => {
     }
   }, [p2pBorrowLendingContract, address]);
 
+  /* Initialize Contracts */
   const initContracts = async () => {
     try {
       if (!isConnected || !provider) {
@@ -145,6 +154,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Fetch Balances */
   const fetchBalances = async () => {
     try {
       if (!isConnected || !provider || !uusdtTokenContract) return;
@@ -159,6 +169,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Fetch Active Offers */
   const fetchActiveOffers = async () => {
     if (!p2pBorrowLendingContract) return;
     try {
@@ -170,6 +181,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Fetch User Loans */
   const fetchUserLoans = async () => {
     if (!p2pBorrowLendingContract || !address) return;
     try {
@@ -195,6 +207,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Fetch All Offers */
   const fetchAllOffers = async () => {
     if (!p2pBorrowLendingContract) return;
     try {
@@ -210,6 +223,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Create Offer */
   const handleCreateOffer = async () => {
     setIsCreatingOffer(true);
     try {
@@ -246,6 +260,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Cancel Offer */
   const handleCancelOffer = async (offerId) => {
     setCancellingStates((prev) => ({ ...prev, [offerId]: true }));
     try {
@@ -262,6 +277,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Borrow From Offer */
   const handleBorrowFromOffer = async (offerId) => {
     setBorrowingStates((prev) => ({ ...prev, [offerId]: true }));
     try {
@@ -285,6 +301,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Repay Loan */
   const handleRepayLoan = async (loanId) => {
     setRepayingLoans((prev) => ({ ...prev, [loanId]: true }));
     try {
@@ -316,6 +333,7 @@ const Dashboard = () => {
     }
   };
 
+  /* Claim Collateral */
   const handleClaimCollateral = async (loanId) => {
     setClaimingStates((prev) => ({ ...prev, [loanId]: true }));
     try {
