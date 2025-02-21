@@ -13,6 +13,7 @@ import { uusdtTokenAbi, p2pBorrowLendingAbi } from "@/assets/abis";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import logo from "@/assets/logo.png";
+import { errorMessage, successMessage } from "@/helpers/toast";
 
 const projectId = "415b280d7f14fd394fac17ffed28e6db";
 
@@ -184,6 +185,7 @@ const Dashboard = () => {
       if (currentAllowance < BigInt(uusdtAmount.toString())) {
         const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
         await approveTx.wait();
+        successMessage("Token approval successful");
       }
 
       const collateralRate = Number(lendingValues.collateralRate);
@@ -194,6 +196,7 @@ const Dashboard = () => {
       await tx.wait();
       await fetchActiveOffers();
       await fetchBalances();
+      successMessage("Lending offer created successfully");
 
       setLendingValues({
         uusdtAmount: "",
@@ -203,6 +206,7 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error("Create offer error:", error);
+      errorMessage("Failed to create lending offer");
     } finally {
       setIsCreatingOffer(false);
     }
@@ -215,8 +219,10 @@ const Dashboard = () => {
       await tx.wait();
       await fetchActiveOffers();
       await fetchBalances();
+      successMessage("Offer cancelled successfully");
     } catch (error) {
       console.error("Cancel offer error:", error);
+      errorMessage("Failed to cancel offer");
     } finally {
       setIsCancelling(false);
     }
@@ -226,15 +232,20 @@ const Dashboard = () => {
     setIsBorrowing(true);
     try {
       const offer = activeOffers.find((offer) => offer.id.toString() === offerId.toString());
-      if (!offer) return;
+      if (!offer) {
+        errorMessage("Offer not found");
+        return;
+      }
 
       const tx = await p2pBorrowLendingContract.borrowFromOffer(offer.id, {
         value: offer.requiredUNIT0,
       });
       await tx.wait();
       await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
+      successMessage("Successfully borrowed from offer");
     } catch (error) {
       console.error("Borrow error:", error);
+      errorMessage("Failed to borrow from offer");
     } finally {
       setIsBorrowing(false);
     }
@@ -244,7 +255,10 @@ const Dashboard = () => {
     setRepayingLoans((prev) => ({ ...prev, [loanId]: true }));
     try {
       const loan = userLoans.find((loan) => loan.id.toString() === loanId.toString());
-      if (!loan) return;
+      if (!loan) {
+        errorMessage("Loan not found");
+        return;
+      }
 
       const interest = (BigInt(loan.uusdtAmount) * BigInt(loan.interestRate)) / BigInt(1000);
       const totalRepayment = BigInt(loan.uusdtAmount) + interest;
@@ -253,13 +267,16 @@ const Dashboard = () => {
       if (currentAllowance < totalRepayment) {
         const approveTx = await uusdtTokenContract.approve(P2PBORROWLENDING_ADDRESS, ethers.MaxUint256);
         await approveTx.wait();
+        successMessage("Token approval successful");
       }
 
       const tx = await p2pBorrowLendingContract.repayLoan(loan.id);
       await tx.wait();
       await Promise.all([fetchUserLoans(), fetchBalances(), fetchActiveOffers()]);
+      successMessage("Loan repaid successfully");
     } catch (error) {
       console.error("Repay error:", error);
+      errorMessage("Failed to repay loan");
     } finally {
       setRepayingLoans((prev) => ({ ...prev, [loanId]: false }));
     }
