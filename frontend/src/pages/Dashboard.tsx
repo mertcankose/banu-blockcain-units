@@ -629,6 +629,8 @@ const Dashboard = () => {
                   <TabsContent value="borrow" className="mt-6">
                     <div className="space-y-6">
                       {/* Your Active Loans */}
+                      <h3 className="text-2xl font-bold text-[#2FFA98]">Your Active Loans</h3>
+
                       <div className="space-y-4">
                         {userLoans.map((loan) => (
                           <div key={loan.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
@@ -681,7 +683,7 @@ const Dashboard = () => {
                                 </p>
                               </div>
                             </div>
-                            asdasdasdasdasd
+
                             <div className="flex justify-between items-center space-x-4 pt-4 border-t border-[#2FFA98]/20">
                               <div className="text-sm">
                                 {loan.isActive ? (
@@ -761,6 +763,10 @@ const Dashboard = () => {
                           </div>
                         ))}
                       </div>
+
+                      <hr />
+
+                      <h3 className="text-2xl font-bold text-[#2FFA98]">Available Offers to Borrow</h3>
 
                       {/* Available Offers to Borrow */}
                       <div className="space-y-4">
