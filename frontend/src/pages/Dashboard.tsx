@@ -330,7 +330,7 @@ const Dashboard = () => {
                       <div className="bg-white/5 p-6 rounded-lg shadow-md border border-[#2FFA98]/20">
                         <div className="mb-6">
                           <h3 className="text-xl font-semibold text-[#2FFA98] mb-2">Create Lending Offer</h3>
-                          <p className="text-sm text-gray-600">Fill in the details to create your lending offer</p>
+                          <p className="text-sm text-gray-300">Fill in the details to create your lending offer</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
