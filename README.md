@@ -10,10 +10,6 @@ Credix consists of:
 - **Claim Collateral**: Claim collateral from a loan.
 - **Cancel Offer**: Cancel an existing offer.
 
-## Documentation
-
-https://book.getfoundry.sh/
-
 ## Usage
 
 ```bash
@@ -24,3 +20,6 @@ npm run dev
 ### Links
 
 - [Credix Frontend](https://credix-units.vercel.app/)
+
+![Screenshot](https://github.com/mertcankose/banu-blockcain-units/blob/main/frontend/src/assets/ss1.png)
+![Screenshot](https://github.com/mertcankose/banu-blockcain-units/blob/main/frontend/src/assets/ss2.png)
