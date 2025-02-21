@@ -14,6 +14,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import logo from "@/assets/logo.png";
 import { errorMessage, successMessage } from "@/helpers/toast";
+import { Link } from "react-router-dom";
 
 const projectId = "415b280d7f14fd394fac17ffed28e6db";
 
@@ -295,7 +296,9 @@ const Dashboard = () => {
 
       <header className="bg-transparent" data-aos="fade-down">
         <div className="container mx-auto px-6 py-6 flex justify-between items-center">
-          <img src={logo} alt="Logo" className="w-36 h-36" />
+          <Link to="/">
+            <img src={logo} alt="Logo" className="w-36 h-36" />
+          </Link>
           <appkit-button balance="show" label="Connect Wallet" size="md" loadingLabel="Connecting.." />
         </div>
       </header>
