@@ -84,8 +84,8 @@ const Dashboard = () => {
   });
 
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
-  const [isBorrowing, setIsBorrowing] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
+  const [borrowingStates, setBorrowingStates] = useState({});
+  const [cancellingStates, setCancellingStates] = useState({});
 
   useEffect(() => {
     AOS.init({
@@ -214,7 +214,7 @@ const Dashboard = () => {
   };
 
   const handleCancelOffer = async (offerId) => {
-    setIsCancelling(true);
+    setCancellingStates((prev) => ({ ...prev, [offerId]: true }));
     try {
       const tx = await p2pBorrowLendingContract.cancelOffer(offerId);
       await tx.wait();
@@ -225,12 +225,12 @@ const Dashboard = () => {
       console.error("Cancel offer error:", error);
       errorMessage("Failed to cancel offer");
     } finally {
-      setIsCancelling(false);
+      setCancellingStates((prev) => ({ ...prev, [offerId]: false }));
     }
   };
 
   const handleBorrowFromOffer = async (offerId) => {
-    setIsBorrowing(true);
+    setBorrowingStates((prev) => ({ ...prev, [offerId]: true }));
     try {
       const offer = activeOffers.find((offer) => offer.id.toString() === offerId.toString());
       if (!offer) {
@@ -248,7 +248,7 @@ const Dashboard = () => {
       console.error("Borrow error:", error);
       errorMessage("Failed to borrow from offer");
     } finally {
-      setIsBorrowing(false);
+      setBorrowingStates((prev) => ({ ...prev, [offerId]: false }));
     }
   };
 
@@ -507,10 +507,10 @@ const Dashboard = () => {
                                 {offer.lender.toLowerCase() === address?.toLowerCase() ? (
                                   <Button
                                     onClick={() => handleCancelOffer(offer.id)}
-                                    disabled={isCancelling}
+                                    disabled={cancellingStates[offer.id]}
                                     className="bg-red-500 hover:bg-red-600 px-6 cursor-pointer"
                                   >
-                                    {isCancelling ? (
+                                    {cancellingStates[offer.id] ? (
                                       <div className="flex items-center justify-center">
                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                                         Cancelling...
@@ -522,10 +522,10 @@ const Dashboard = () => {
                                 ) : (
                                   <Button
                                     onClick={() => handleBorrowFromOffer(offer.id)}
-                                    disabled={isBorrowing}
+                                    disabled={borrowingStates[offer.id]}
                                     className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
                                   >
-                                    {isBorrowing ? (
+                                    {borrowingStates[offer.id] ? (
                                       <div className="flex items-center justify-center">
                                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                                         Borrowing...
@@ -669,10 +669,10 @@ const Dashboard = () => {
                             <div className="flex justify-end space-x-4 pt-4 border-t border-[#2FFA98]/20">
                               <Button
                                 onClick={() => handleBorrowFromOffer(offer.id)}
-                                disabled={isBorrowing}
+                                disabled={borrowingStates[offer.id]}
                                 className="bg-gradient-to-r from-[#2FFA98] to-[#22DD7B] px-6 cursor-pointer"
                               >
-                                {isBorrowing ? (
+                                {borrowingStates[offer.id] ? (
                                   <div className="flex items-center justify-center">
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
                                     Borrowing...
