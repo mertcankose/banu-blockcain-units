@@ -2,7 +2,7 @@
 
 ## Credix - Banuchain
 
-**Credix is a lending platform for borrowing and lending tokens on the Banuchain network.**
+**Credix is a lending platform for borrowing and lending tokens on the Units network.**
 
 Credix consists of:
 
