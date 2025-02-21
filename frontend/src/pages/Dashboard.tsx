@@ -396,7 +396,7 @@ const Dashboard = () => {
                           <p className="text-sm text-gray-300">Fill in the details to create your lending offer</p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                           <div className="space-y-1.5">
                             <label className="text-sm text-gray-300">Amount (UUSDT)</label>
                             <Input
@@ -456,11 +456,11 @@ const Dashboard = () => {
                         <div className="mb-4 p-4 bg-black/20 rounded-lg">
                           <h4 className="text-sm font-semibold text-[#2FFA98] mb-2">Summary</h4>
                           <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
+                            <div className="flex flex-col lg:flex-row justify-between text-sm">
                               <span className="text-gray-300">Lending Amount:</span>
                               <span>{lendingValues.uusdtAmount || "0"} UUSDT</span>
                             </div>
-                            <div className="flex justify-between text-sm">
+                            <div className="flex flex-col lg:flex-row justify-between text-sm">
                               <span className="text-[#2FFA98]">Platform Fee (1%):</span>
                               <span className="text-[#2FFA98]">
                                 {lendingValues.uusdtAmount
@@ -469,7 +469,7 @@ const Dashboard = () => {
                                 UUSDT
                               </span>
                             </div>
-                            <div className="flex justify-between text-sm font-bold pt-2 border-t border-[#2FFA98]/20">
+                            <div className="flex flex-col lg:flex-row justify-between text-sm font-bold pt-2 border-t border-[#2FFA98]/20">
                               <span>Total Required:</span>
                               <span>
                                 {lendingValues.uusdtAmount
@@ -530,7 +530,7 @@ const Dashboard = () => {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-3 gap-4 my-4">
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 my-4">
                                 <div>
                                   <p className="text-sm text-gray-400">Lending Amount</p>
                                   <p className="text-lg font-semibold">{ethers.formatEther(offer.uusdtAmount)} UUSDT</p>
@@ -614,7 +614,7 @@ const Dashboard = () => {
                       <div className="space-y-4">
                         {userLoans.map((loan) => (
                           <div key={loan.id} className="bg-white/5 p-6 rounded-lg border border-[#2FFA98]/20">
-                            <div className="flex justify-between items-center pb-4 border-b border-[#2FFA98]/20">
+                            <div className="flex flex-col gap-2 lg:gap-0 lg:flex-row justify-between items-start lg:items-center pb-4 border-b border-[#2FFA98]/20">
                               <div className="flex items-center space-x-2">
                                 <Wallet className="w-5 h-5 text-[#2FFA98]" />
                                 <p className="text-sm text-gray-300">
@@ -626,7 +626,7 @@ const Dashboard = () => {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 my-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 my-4">
                               <div>
                                 <p className="text-sm text-gray-400">Borrowed Amount</p>
                                 <p className="text-lg font-semibold">{ethers.formatEther(loan.uusdtAmount)} UUSDT</p>
@@ -754,7 +754,7 @@ const Dashboard = () => {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-4 my-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 my-4">
                               <div>
                                 <p className="text-sm text-gray-400">Lending Amount</p>
                                 <p className="text-lg font-semibold">{ethers.formatEther(offer.uusdtAmount)} UUSDT</p>

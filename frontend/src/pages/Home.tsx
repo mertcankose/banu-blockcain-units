@@ -11,7 +11,7 @@ function getRandomGreen() {
 }
 
 function createRandomBubble() {
-  const size = Math.floor(Math.random() * 60) + 40;
+  const size = Math.floor(Math.random() * 40) + 20;
   const top = Math.floor(Math.random() * 80) + 10 + "%";
   const left = Math.floor(Math.random() * 80) + 10 + "%";
   return {
@@ -37,9 +37,9 @@ function createRandomLine() {
 }
 
 const INITIAL_BUBBLES = [
-  { id: "1", top: "10%", left: "15%", width: 80, height: 80, bg: "#29FD53" },
-  { id: "2", top: "30%", left: "30%", width: 60, height: 60, bg: "#61FF91" },
-  { id: "3", top: "70%", left: "60%", width: 100, height: 100, bg: "#9FFFBE" },
+  { id: "1", top: "10%", left: "15%", width: 40, height: 40, bg: "#29FD53" },
+  { id: "2", top: "30%", left: "30%", width: 30, height: 30, bg: "#61FF91" },
+  { id: "3", top: "70%", left: "60%", width: 50, height: 50, bg: "#9FFFBE" },
 ];
 
 const Home = () => {
@@ -109,8 +109,8 @@ const Home = () => {
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: 500,
-          height: 500,
+          width: "min(500px, 90vw)",
+          height: "min(500px, 90vw)",
           borderRadius: "50%",
           background: "linear-gradient(135deg, rgba(0,255,0,0.3), rgba(0,100,0,0.2))",
           filter: "blur(100px)",
@@ -178,36 +178,50 @@ const Home = () => {
         style={{
           position: "absolute",
           top: "50%",
-          left: "50%",
+
           transform: "translate(-50%, -50%)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: "1rem",
+          gap: "clamp(1rem, 3vh, 2rem)",
+          width: "90%",
+          maxWidth: "800px",
+          padding: "clamp(1rem, 3vh, 2rem)",
+          minHeight: "min-content",
+          margin: "0 auto",
+          zIndex: 10,
+          textAlign: "center",
         }}
       >
         <h1
           style={{
-            fontSize: "6rem",
-            margin: 0,
+            fontSize: "clamp(2.5rem, 8vw, 6rem)",
+            margin: "0 auto",
             padding: 0,
             fontWeight: 700,
             textShadow: "0 0 10px rgba(0, 255, 0, 0.5)",
             color: "#BFFFC8",
+            textAlign: "center",
+            lineHeight: "1.1",
+            maxWidth: "100%",
+            display: "inline-block",
           }}
         >
           Credix
         </h1>
         <h2
           style={{
-            fontSize: "2rem",
-            margin: 0,
-            padding: 0,
+            fontSize: "clamp(1.2rem, 4vw, 2rem)",
+            margin: "0 auto",
+            padding: "0 clamp(0.5rem, 2vw, 1rem)",
             fontWeight: 400,
             textAlign: "center",
             color: "#BFFFC8",
             textShadow: "0 0 6px rgba(0, 255, 0, 0.4)",
+            maxWidth: "100%",
+            lineHeight: "1.3",
+            display: "inline-block",
           }}
         >
           The Future of Peer-to-Peer Lending and Borrowing
@@ -217,17 +231,21 @@ const Home = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           style={{
-            padding: "0.75rem 1.5rem",
+            padding: "clamp(0.6rem, 2vw, 0.75rem) clamp(1.2rem, 3vw, 1.5rem)",
             borderRadius: "9999px",
             border: "2px solid #BFFFC8",
             backgroundColor: "transparent",
             color: "#BFFFC8",
             fontWeight: 600,
             cursor: "pointer",
-            fontSize: "1.2rem",
-            display: "flex",
+            fontSize: "clamp(1rem, 3vw, 1.2rem)",
+            display: "inline-flex",
             alignItems: "center",
+            justifyContent: "center",
             gap: "0.5rem",
+            marginTop: "clamp(1rem, 3vh, 2rem)",
+            whiteSpace: "nowrap",
+            margin: "clamp(1rem, 3vh, 2rem) auto 0",
           }}
         >
           Get Started
