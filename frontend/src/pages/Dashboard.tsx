@@ -26,7 +26,7 @@ const metadata = {
 };
 
 const unit0testnet = {
-  id: 88817,
+  id: 88811,
   name: "UNIT ZERO",
   nativeCurrency: {
     name: "UNIT ZERO",
@@ -35,13 +35,13 @@ const unit0testnet = {
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc-testnet.unit0.dev"],
+      http: ["https://rpc.unit0.dev"],
     },
   },
   blockExplorers: {
     default: {
       name: "Explorer",
-      url: "https://explorer-testnet.unit0.dev",
+      url: "https://explorer.unit0.dev",
     },
   },
 };
@@ -61,8 +61,8 @@ createAppKit({
 
 const Dashboard = () => {
   /* Contract Addresses */
-  const UUSDT_TOKEN_ADDRESS = "0xC46643d498067CA186505E2eCD3c4A41A4b76dA0";
-  const P2PBORROWLENDING_ADDRESS = "0x6B4C736c2F08dA6E00A1ecC9dD7a99C759114D99";
+  const UUSDT_TOKEN_ADDRESS = "0xB13Ae312BC7c45d7120bf8bf317d5f55C36b19dF";
+  const P2PBORROWLENDING_ADDRESS = "0xDCb086519b5776AcBE15EeA5d65FC72498AD110f";
 
   /* AppKit */
   const { walletProvider } = useAppKitProvider("eip155");
