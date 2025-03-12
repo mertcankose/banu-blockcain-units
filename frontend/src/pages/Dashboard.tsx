@@ -61,8 +61,8 @@ createAppKit({
 
 const Dashboard = () => {
   /* Contract Addresses */
-  const UUSDT_TOKEN_ADDRESS = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
-  const P2PBORROWLENDING_ADDRESS = "0x3561337b71B90C3dE59d25c72bA5caB4f0e1f027";
+  const UUSDT_TOKEN_ADDRESS = "0xb303d80db8415FD1d3C9FED68A52EEAc9a052671";
+  const P2PBORROWLENDING_ADDRESS = "0x77F361277b746d825eBcC423dBb449C3C1b40885";
 
   /* AppKit */
   const { walletProvider } = useAppKitProvider("eip155");
